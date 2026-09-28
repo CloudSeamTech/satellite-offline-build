@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline Satellite Build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#0d0c0a;--black-2:#161410;--hair:rgba(237,226,205,.14);--hair-2:rgba(237,226,205,.24);
+  --tan:#d4bf98;--tan-2:#c9b28a;--beige:#efe6d6;--beige-2:#d9ccb6;--beige-3:#a89a84;
+  --brown:#9b6a3c;--brown-2:#b8844f;--brown-3:#d4a674;--green:#6f8f58;--green-2:#9dbb82;--rust:#d68068;
+  --serif:"Source Serif 4","Iowan Old Style",Georgia,serif;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  --head:76px;--side:320px;
+  /* card scope */
+  --ink:#efe6d6;--ink-2:#dccfba;--muted:#ad9f8a;--line:rgba(239,230,214,.12);--line-2:rgba(239,230,214,.22);
+  --panel:rgba(255,248,235,.035);--bg:rgba(255,248,235,.06);--accent:#d4a674;--accent-soft:rgba(212,166,116,.18);
+  --why:rgba(212,166,116,.10);--why-line:#d4a674;--rule:rgba(150,180,122,.11);--rule-line:#96b47a;
+  --choice:rgba(205,165,104,.11);--choice-line:#cda468;--warn:rgba(214,128,104,.13);--warn-line:#d68068;
+  --ift:rgba(180,160,132,.11);--ift-line:#b4a084;--var-bg:rgba(212,166,116,.22);--var-ink:#f2d6aa;--ok:#9dbb82;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--head) + 16px)}
+body{margin:0;min-height:100vh;background:var(--tan) radial-gradient(ellipse 80% 60% at 60% 0%,rgba(255,250,238,.4),transparent 70%) fixed;color:var(--ink);font:15.5px/1.7 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--brown-3)}
+.hidden{display:none!important}
+
+/* ---------- header ---------- */
+.site{position:fixed;inset:0 0 auto 0;height:var(--head);z-index:30;display:flex;align-items:stretch;background:rgba(13,12,10,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair-2);color:var(--beige)}
+.site .gridbtn{width:var(--head);flex:none;display:grid;place-items:center;border:0;border-right:1px solid var(--hair-2);background:none;color:var(--beige);cursor:pointer}
+.site .gridbtn svg{width:22px;height:22px}
+.brand{display:flex;align-items:center;gap:14px;padding:0 26px;text-decoration:none;color:var(--beige);min-width:0}
+.brand svg{width:50px;height:50px;flex:none;filter:drop-shadow(0 0 10px rgba(143,154,92,.35))}
+.brand b{display:block;font:600 1.18rem/1.1 var(--sans);letter-spacing:.14em}
+.brand span{display:block;font:500 .82rem/1.3 var(--sans);letter-spacing:.06em;color:var(--brown-3);margin-top:3px}
+.site nav.top{margin-left:auto;display:flex;align-items:center;gap:6px;padding:0 18px}
+.site nav.top button{background:none;border:0;border-bottom:1px solid transparent;border-top:1px solid transparent;color:var(--beige);font:500 .95rem var(--sans);padding:14px 12px;cursor:pointer}
+.site nav.top button:hover{color:var(--brown-3)}
+.site nav.top button.on{color:var(--brown-3);border-color:var(--brown-2)}
+.site .iconbtn{align-self:center;width:44px;height:44px;margin:0 18px 0 6px;display:grid;place-items:center;border:1px solid var(--beige-2);background:none;color:var(--beige);cursor:pointer}
+.site .iconbtn:hover{border-color:var(--brown-3);color:var(--brown-3)}
+.site .cta{flex:none;display:flex;align-items:center;gap:14px;padding:0 34px;background:var(--brown);color:#fbf5ea;text-decoration:none;font:500 1.1rem var(--serif);border:0;cursor:pointer}
+.site .cta:hover{background:var(--brown-2)}
+.site .cta svg{width:22px;height:22px}
+
+/* ---------- frame ---------- */
+.frame{display:grid;grid-template-columns:var(--side) minmax(0,1fr);padding-top:var(--head);min-height:100vh;transition:grid-template-columns .2s}
+body.collapsed .frame{grid-template-columns:0 minmax(0,1fr)}
+body.collapsed .sidebar{visibility:hidden}
+
+/* ---------- sidebar ---------- */
+.sidebar{--ink:#f3ecdf;--ink-2:#d9cfbe;--muted:#9d9383;--line:#2c2925;--line-2:#3d3933;--panel:#1e1c19;--bg:#0e0d0c;--accent:#c79a68;--accent-soft:#2e2519;--ok:#86a36c;
+  position:sticky;top:var(--head);height:calc(100vh - var(--head));overflow-y:auto;background:var(--black);border-right:1px solid var(--hair-2);padding:26px 22px 30px;color:var(--ink)}
+.side-label{font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.side-label::before{content:"";width:28px;height:0;border-top:3px dotted var(--brown-2)}
+.prog{font-size:.8rem;color:var(--muted);margin-bottom:24px}
+.prog .track{height:4px;background:var(--line);margin-top:8px;overflow:hidden}
+.prog .track i{display:block;height:100%;width:0;background:var(--ok);transition:width .25s}
+ol.path{list-style:none;margin:0;padding:0}
+ol.path li{position:relative;padding:0 0 4px}
+ol.path li:not(:last-child)::before{content:"";position:absolute;left:15px;top:30px;bottom:-2px;width:1px;background:var(--line-2)}
+ol.path li.done:not(:last-child)::before{background:var(--ok);width:2px;left:14.5px}
+ol.path a{display:grid;grid-template-columns:32px 1fr;gap:12px;text-decoration:none;color:var(--ink-2);padding:4px 0 10px}
+ol.path .node{width:32px;height:32px;border:1px solid var(--line-2);background:var(--black);display:grid;place-items:center;font:600 .8rem var(--mono);color:var(--muted);position:relative;z-index:1;transition:all .2s}
+ol.path .txt{padding-top:4px;font-size:.9rem;line-height:1.35}
+ol.path .txt small{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
+ol.path a:hover .txt{color:#fff}
+ol.path li.partial .node{border-color:var(--ok);color:var(--ok)}
+ol.path li.done .node{background:var(--ok);border-color:var(--ok);color:var(--black)}
+ol.path li.active .node{border-color:var(--brown-3);color:var(--brown-3);box-shadow:0 0 0 3px rgba(199,154,104,.18),0 0 18px rgba(199,154,104,.25)}
+ol.path li.done.active .node{color:var(--black)}
+ol.path li.active .txt{color:#fff;font-weight:600}
+nav.tlist a{display:block;padding:7px 12px;color:var(--ink-2);text-decoration:none;font-size:.87rem;line-height:1.35;border-left:1px solid var(--line-2)}
+nav.tlist a:hover{color:#fff;border-left-color:var(--brown-3)}
+nav.tlist a.active{border-left:2px solid var(--brown-3);color:#fff;background:rgba(199,154,104,.08)}
+
+/* ---------- content ---------- */
+.content{min-width:0}
+.crumb{position:sticky;top:var(--head);z-index:5;padding:10px clamp(20px,4vw,64px);font-size:.82rem;color:#4f4230;background:color-mix(in srgb,var(--tan) 85%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid rgba(0,0,0,.1)}
+.crumb b{color:#1c1a16}
+main{padding:28px clamp(20px,4vw,64px) 90px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);min-height:calc(100vh - var(--head) - 41px);background:var(--black);border-bottom:1px solid var(--hair-2);overflow:hidden}
+.hero .art{position:relative;background:radial-gradient(ellipse at 30% 30%,rgba(184,132,79,.28),transparent 55%),radial-gradient(ellipse at 75% 75%,rgba(111,143,88,.25),transparent 55%),#0a0908;border-right:1px solid var(--hair);display:grid;place-items:center;overflow:hidden}
+.hero .art svg{width:88%;max-width:640px;height:auto;overflow:visible}
+.hero .copy{padding:clamp(28px,5vw,80px);display:flex;flex-direction:column;justify-content:center}
+.eyebrow{display:flex;align-items:center;gap:14px;color:var(--brown-3);font-size:.95rem;margin-bottom:20px}
+.eyebrow::before{content:"";width:64px;border-top:4px dotted #4a3c2c}
+.hero h1{font:400 clamp(2.3rem,3.6vw,4rem)/1.1 var(--serif);max-width:15ch;margin:0 0 24px;color:#fbf5ea;letter-spacing:-.01em}
+.hero h1 em{font-style:normal;color:var(--green-2)}
+.hero p{color:var(--beige-2);max-width:56ch;margin:0 0 34px;font-size:1.02rem}
+.hero .btns{display:flex;flex-wrap:wrap;gap:14px}
+.btn{display:inline-flex;align-items:center;gap:14px;padding:14px 28px;background:var(--brown);color:#fbf5ea;font:500 1.1rem var(--serif);border:1px solid var(--brown);cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--brown-2)}
+.btn.ghost{background:transparent;border-color:var(--beige-3);color:var(--beige)}
+.btn.ghost:hover{border-color:var(--brown-3);color:var(--brown-3)}
+.btn svg{width:20px;height:20px}
+.stats{display:flex;flex-wrap:wrap;gap:0;margin-top:44px;border-top:1px solid var(--hair)}
+.stats div{padding:16px 26px 0 0;margin-right:26px;border-right:1px solid var(--hair)}
+.stats div:last-child{border-right:0}
+.stats b{display:block;font:400 1.8rem/1 var(--serif);color:#fbf5ea}
+.stats span{font-size:.78rem;color:var(--beige-3);letter-spacing:.04em}
+.pagehead{background:var(--black);border:1px solid rgba(0,0,0,.4);padding:clamp(28px,4vw,56px);margin:0 0 30px;box-shadow:0 20px 50px rgba(40,28,12,.25)}
+.pagehead h1{font:400 clamp(2rem,3.6vw,3.2rem)/1.1 var(--serif);margin:0 0 12px;color:#fbf5ea}
+.pagehead h1 em{font-style:normal;color:var(--green-2)}
+.pagehead p{margin:0;color:var(--beige-2);max-width:70ch}
+
+/* cards */
+section.step,.ts,.search,main>.box{background-color:rgba(14,12,10,.86);border:1px solid rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 12px 34px rgba(40,28,12,.22);color:var(--ink)}
+section.step{padding:clamp(22px,3vw,44px) clamp(20px,3.2vw,52px) 22px;margin-bottom:30px}
+section.step>p,section.step>ol,section.step>ul,.box p{max-width:92ch}
+.tag{display:flex;align-items:center;gap:12px;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brown-3);margin-bottom:10px}
+.tag::before{content:"";width:34px;border-top:3px dotted #5a4733}
+section.step h2{font:400 clamp(1.6rem,2.4vw,2.2rem)/1.2 var(--serif);margin:0 0 12px;color:#fbf5ea}
+h3{font:600 1.08rem/1.35 var(--sans);margin:34px 0 12px;padding-top:22px;border-top:1px solid var(--line);color:#fbf5ea}
+h4{font-size:.98rem;margin:24px 0 8px;color:var(--ink-2)}
+.story{font-size:1.02rem;color:var(--ink-2);margin:10px 0 16px}
+.goal{color:var(--muted)}
+ol.do{padding-left:0;list-style:none;margin:10px 0}
+ol.do>li{position:relative;padding:9px 0 9px 38px;border-bottom:1px solid var(--line)}
+ol.do>li:last-child{border-bottom:none}
+ol.do>li input{position:absolute;left:4px;top:13px;width:17px;height:17px;accent-color:#6f8f58;cursor:pointer}
+ol.do>li.done>span.t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line-2)}
+.box{border:1px solid var(--line);border-left:3px solid;padding:14px 18px;margin:18px 0;font-size:.95rem}
+.box b.h{display:block;margin-bottom:5px;font-size:.96rem;color:#fbf5ea}
+.why{background:var(--why);border-left-color:var(--why-line)}
+.rule{background:var(--rule);border-left-color:var(--rule-line)}
+.choice{background:var(--choice);border-left-color:var(--choice-line)}
+.warn{background:var(--warn);border-left-color:var(--warn-line)}
+.ift{background:var(--ift);border-left-color:var(--ift-line)}
+main>.box.rule{background:rgba(14,12,10,.86);border-left-color:var(--rule-line)}
+main>.box.choice{background:rgba(14,12,10,.86);border-left-color:var(--choice-line)}
+.box p{margin:6px 0}.box ul,.box ol{margin:6px 0;padding-left:22px}.box li{margin:4px 0}
+pre{position:relative;background:rgba(0,0,0,.6);border:1px solid rgba(239,230,214,.08);color:#ebe3d4;padding:18px 18px 16px;overflow:auto;font:13px/1.65 var(--mono);margin:14px 0}
+pre .copy{position:absolute;top:10px;right:10px;background:transparent;color:#9a8f7e;border:1px solid #3a352e;padding:3px 10px;font:600 .72rem var(--sans);cursor:pointer}
+pre .copy:hover{color:#fffdf8;border-color:var(--brown-2)}
+pre .lbl{display:block;color:#9a8f7e;font:700 .68rem var(--sans);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+code{font-family:var(--mono);font-size:.86em}
+:not(pre)>code{background:rgba(255,248,235,.07);border:1px solid rgba(239,230,214,.14);padding:1px 5px}
+.v{background:var(--var-bg);color:var(--var-ink);padding:0 3px}
+pre .v{background:#3d2f1d;color:#e8c998}
+dl.flags{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;font-size:.92rem;margin:6px 0 18px;padding:38px 18px 14px;border:1px solid var(--line);position:relative;background:rgba(255,248,235,.03)}
+dl.flags::before{content:"What each piece means";position:absolute;top:12px;left:18px;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+dl.flags dt{font:600 .84rem var(--mono);white-space:nowrap;color:var(--brown-3)}
+dl.flags dd{margin:0;color:var(--ink-2)}
+.expect{border:1px solid var(--line);border-left:3px solid var(--ok);padding:11px 16px;margin:10px 0 18px;font-size:.94rem;background:rgba(255,248,235,.03)}
+.expect b{color:var(--ok)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:rgba(255,248,235,.05)}
+tr:last-child td{border-bottom:0}
+.gloss td:first-child{font-weight:600;white-space:nowrap;color:#fbf5ea}
+.vars{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0}
+.vars label{display:flex;flex-direction:column;font-size:.75rem;font-weight:600;color:var(--muted)}
+.vars input{font:13.5px var(--mono);padding:8px 10px;border:1px solid rgba(239,230,214,.18);background:rgba(0,0,0,.35);color:var(--ink);margin-top:5px}
+.vars input:focus{outline:none;border-color:var(--brown-3)}
+.reset{font-size:.78rem;color:var(--muted);background:transparent;border:1px solid var(--line-2);padding:6px 12px;cursor:pointer}
+details{border:1px solid var(--line);padding:12px 16px;margin:14px 0}
+details summary{cursor:pointer;font-weight:600;color:#fbf5ea}
+.check{border:1px solid var(--line);border-top:3px solid var(--ok);padding:14px 18px;margin:26px 0 8px;background:rgba(150,180,122,.07)}
+.check b.h{color:var(--ok);font-size:.76rem;letter-spacing:.12em;text-transform:uppercase}
+.search{display:block;width:100%;padding:16px 18px;font:inherit;color:var(--ink);margin-bottom:20px;outline:none}
+.search::placeholder{color:var(--muted)}
+.search:focus{border-color:var(--brown-3)}
+.ts{padding:26px clamp(18px,2.6vw,38px);margin-bottom:20px}
+.ts h3{border:none;margin:0 0 4px;padding:0;font:400 1.4rem/1.3 var(--serif)}
+.ts .meta{font-size:.74rem;color:var(--muted);margin-bottom:14px;letter-spacing:.04em}
+.ts>dl{display:grid;grid-template-columns:130px 1fr;gap:12px 20px;margin:0}
+.ts>dl>dt{font-weight:700;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brown-3);padding-top:4px}
+.ts>dl>dd{margin:0}
+kbd{font:600 .78em var(--mono);border:1px solid rgba(239,230,214,.25);border-bottom-width:2px;padding:0 5px;background:rgba(255,248,235,.08)}
+main>.box{padding:20px 24px}
+
+.mtabs{display:none;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+.mtabs button{flex:1;background:none;border:1px solid var(--line-2);color:var(--ink-2);font:600 .78rem var(--sans);padding:8px 6px;cursor:pointer}
+@media (max-width:1100px){
+  .mtabs{display:flex}
+  .site nav.top{display:none}
+  .hero{grid-template-columns:1fr;min-height:0}
+  .hero .art{min-height:320px;border-right:0;border-bottom:1px solid var(--hair)}
+}
+@media (max-width:900px){
+  :root{--head:64px}
+  .frame{grid-template-columns:1fr}
+  .sidebar{position:fixed;top:var(--head);left:0;width:320px;max-width:88vw;z-index:25;transform:translateX(-100%);transition:transform .2s;visibility:visible!important;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  body.nav-open .sidebar{transform:none}
+  body.collapsed .frame{grid-template-columns:1fr}
+  .brand{padding:0 14px}.brand svg{width:38px;height:38px}.brand b{font-size:1rem}.brand span{font-size:.72rem}
+  .site .iconbtn{display:none}
+  .site .cta{padding:0 16px;font-size:.95rem}
+  .site .cta .lbl{display:none}
+  main{padding:18px 12px 60px}
+  .crumb{padding:8px 14px}
+  section.step{padding:22px 16px 12px}
+  dl.flags{grid-template-columns:1fr;gap:2px 0}
+  dl.flags dt{white-space:normal;margin-top:8px}
+  .ts>dl{grid-template-columns:1fr;gap:4px}
+  .ts>dl>dt{padding-top:10px}
+  .stats div{padding-right:14px;margin-right:14px}
+}
+/* ===== dark grey boxes + army green borders ===== */
+:root{--army:#4b5320;--army-2:#66713a;--army-3:#8f9a5c;--khaki:#c9bf98;--grey:#26292b;--grey-2:#2e3234;--page:#121413;
+  --accent:#b8c07e;--brown-3:#b8c07e;--brown:#4b5320;--brown-2:#5d6729;--ok:#9fb46f;
+  --why:#2e3234;--why-line:#c9bf98;--rule:#2e3234;--rule-line:#8f9a5c;--choice:#2e3234;--choice-line:#b3a15f;--warn:#2e3234;--warn-line:#c7735d;--ift:#2e3234;--ift-line:#9a91b0;
+  --var-bg:rgba(143,154,92,.22);--var-ink:#dfe5b8;--accent-soft:rgba(143,154,92,.2)}
+body{background:var(--page) radial-gradient(ellipse 80% 50% at 60% 0%,rgba(75,83,32,.18),transparent 70%) fixed}
+.crumb{background:rgba(18,20,19,.9);color:#8d918a;border-bottom:1px solid rgba(143,154,92,.25)}
+.crumb b{color:#e8e4d8}
+section.step,.ts,.search,main>.box{background-color:var(--grey);border:1px solid var(--army-2);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+main>.box.rule,main>.box.choice{background:var(--grey)}
+.box{border:1px solid rgba(143,154,92,.35);border-left:3px solid}
+dl.flags,.expect,.tablewrap,details{border-color:rgba(143,154,92,.35);background:rgba(0,0,0,.14)}
+.check{border-color:rgba(143,154,92,.35);border-top-color:var(--army-3);background:rgba(75,83,32,.14)}
+pre{background:#161819;border-color:rgba(143,154,92,.25)}
+pre .v{background:#39401f;color:#dfe5b8}
+pre .copy{border-color:#3d4430}
+pre .copy:hover{border-color:var(--army-3);color:#fff}
+.tag::before,.eyebrow::before,.side-label::before{border-top-color:var(--army-2)}
+.hero{border-bottom-color:var(--army-2)}
+.hero .art{background:radial-gradient(ellipse at 30% 30%,rgba(143,154,92,.22),transparent 55%),radial-gradient(ellipse at 75% 75%,rgba(201,191,152,.12),transparent 55%),#0c0d0c;border-right-color:rgba(143,154,92,.3)}
+.hero h1 em,.pagehead h1 em{color:#a9b86c}
+.eyebrow{color:var(--khaki)}
+.pagehead{background:var(--grey);border:1px solid var(--army-2)}
+.btn,.site .cta{background:var(--army);border-color:var(--army-2)}
+.btn:hover,.site .cta:hover{background:#5d6729}
+.btn.ghost{background:transparent;border-color:#6c7163}
+.site{border-bottom-color:rgba(143,154,92,.35)}
+.site .gridbtn{border-right-color:rgba(143,154,92,.35)}
+.site nav.top button.on{border-color:var(--army-3)}
+.sidebar{border-right-color:rgba(143,154,92,.35);--accent:#b8c07e}
+ol.path li.active .node{border-color:#b8c07e;color:#b8c07e;box-shadow:0 0 0 3px rgba(143,154,92,.2),0 0 16px rgba(143,154,92,.25)}
+nav.tlist a.active{border-left-color:#b8c07e;background:rgba(143,154,92,.1)}
+nav.tlist a:hover{border-left-color:#b8c07e}
+.vars input{border-color:rgba(143,154,92,.35)}
+.vars input:focus,.search:focus{border-color:#b8c07e}
+a{color:#b8c07e}
+
+</style>
+</head>
+<body>
+<header class="site">
+  <button class="gridbtn" id="gridbtn" aria-label="Toggle pathway panel"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="4.5" height="4.5"/><rect x="9.75" y="3" width="4.5" height="4.5"/><rect x="16.5" y="3" width="4.5" height="4.5"/><rect x="3" y="9.75" width="4.5" height="4.5"/><rect x="9.75" y="9.75" width="4.5" height="4.5"/><rect x="16.5" y="9.75" width="4.5" height="4.5"/><rect x="3" y="16.5" width="4.5" height="4.5"/><rect x="9.75" y="16.5" width="4.5" height="4.5"/><rect x="16.5" y="16.5" width="4.5" height="4.5"/></svg></button>
+  <a class="brand" href="#top" data-tab="guide"><svg viewBox="0 0 64 64" fill="none" stroke="#8f9a5c" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><polygon points="32,3 55,14 61,38 45,59 19,59 3,38 9,14"/><polyline points="9,14 24,22 32,3 40,22 55,14"/><polyline points="24,22 40,22 46,40 32,50 18,40 24,22"/><polyline points="3,38 18,40 19,59"/><polyline points="61,38 46,40 45,59"/><polyline points="32,50 19,59"/><polyline points="32,50 45,59"/><polyline points="18,40 9,14"/><polyline points="46,40 55,14"/><circle cx="32" cy="32" r="3" fill="#9dbb82" stroke="none"/></svg><div><b>SATELLITE</b><span>Offline Build Guide</span></div></a>
+  <nav class="top">
+    <button data-tab="guide" class="on">Build Guide</button>
+    <button data-flags>Flags 101</button>
+    <button data-tab="trouble">Troubleshooting</button>
+  </nav>
+  <button class="iconbtn" id="searchbtn" aria-label="Search troubleshooting"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg></button>
+  <a class="cta" href="#s0" data-start><span class="lbl">Start Building</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 8v10H8"/></svg></a>
+</header>
+<div class="frame">
+<aside class="sidebar">
+  <div class="mtabs"><button data-tab="guide">Build Guide</button><button data-flags>Flags 101</button><button data-tab="trouble">Troubleshooting</button></div>
+  <div id="pathwrap">
+    <p class="side-label">Progress</p>
+    <div class="prog"><span id="progtxt"></span><div class="track"><i id="progbar"></i></div></div>
+    <p class="side-label">Pathway</p>
+    <ol class="path" id="path"></ol>
+  </div>
+  <div id="tnavwrap" class="hidden">
+    <p class="side-label">Issues</p>
+    <nav class="tlist" id="tnav"></nav>
+  </div>
+</aside>
+<div class="content">
+  <div class="crumb" id="crumb"></div>
+  <div id="guide"><section class="hero" id="top">
+<div class="art"><svg viewBox="0 0 600 560" fill="none" aria-label="Illustration of an air-gapped server rack" role="img">
+<defs>
+<linearGradient id="rk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#231f19"/><stop offset="1" stop-color="#14120f"/></linearGradient>
+<radialGradient id="gl" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#8f9a5c" stop-opacity=".5"/><stop offset="1" stop-color="#8f9a5c" stop-opacity="0"/></radialGradient>
+<radialGradient id="gg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#9dbb82" stop-opacity=".5"/><stop offset="1" stop-color="#9dbb82" stop-opacity="0"/></radialGradient>
+</defs>
+<g stroke="#3a3228" stroke-width="1">
+<polygon points="470,40 560,90 575,190 505,250 420,215 405,120" />
+<polyline points="405,120 490,150 470,40"/><polyline points="490,150 560,90"/><polyline points="490,150 575,190"/><polyline points="490,150 505,250"/><polyline points="490,150 420,215"/>
+</g>
+<circle cx="490" cy="150" r="60" fill="url(#gg)"/>
+<circle cx="490" cy="150" r="4" fill="#9dbb82"/>
+<circle cx="180" cy="120" r="150" fill="url(#gl)"/>
+<g stroke="#c9bf98" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".95" style="filter:drop-shadow(0 0 8px #8f9a5c)">
+<path d="M150 70 h60 a10 10 0 0 1 10 10 v80 a10 10 0 0 1 -10 10 h-60 a10 10 0 0 1 -10 -10 v-80 a10 10 0 0 1 10 -10z"/>
+<path d="M165 95 h30 M165 115 h30 M165 135 h18"/>
+</g>
+<rect x="150" y="215" width="250" height="310" rx="6" fill="url(#rk)" stroke="#4a3f33"/>
+<g font-family="JetBrains Mono,monospace" font-size="11" fill="#8c8272">
+<g id="u"><rect x="168" y="235" width="214" height="36" fill="#1b1814" stroke="#3a3228"/><rect x="182" y="247" width="120" height="4" fill="#2f2a22"/><rect x="182" y="256" width="90" height="4" fill="#2f2a22"/><circle cx="352" cy="253" r="4" fill="#9dbb82"/><circle cx="366" cy="253" r="4" fill="#3a3228"/></g>
+<rect x="168" y="281" width="214" height="36" fill="#1b1814" stroke="#3a3228"/><rect x="182" y="293" width="140" height="4" fill="#2f2a22"/><rect x="182" y="302" width="70" height="4" fill="#2f2a22"/><circle cx="352" cy="299" r="4" fill="#9dbb82"/><circle cx="366" cy="299" r="4" fill="#c9bf98"/>
+<rect x="168" y="327" width="214" height="36" fill="#1b1814" stroke="#3a3228"/><rect x="182" y="339" width="100" height="4" fill="#2f2a22"/><rect x="182" y="348" width="120" height="4" fill="#2f2a22"/><circle cx="352" cy="345" r="4" fill="#9dbb82"/><circle cx="366" cy="345" r="4" fill="#9dbb82"/>
+<rect x="168" y="373" width="214" height="36" fill="#1b1814" stroke="#3a3228"/><rect x="182" y="385" width="130" height="4" fill="#2f2a22"/><rect x="182" y="394" width="60" height="4" fill="#2f2a22"/><circle cx="352" cy="391" r="4" fill="#9dbb82"/><circle cx="366" cy="391" r="4" fill="#3a3228"/>
+<rect x="168" y="419" width="214" height="36" fill="#1b1814" stroke="#3a3228"/><rect x="182" y="431" width="90" height="4" fill="#2f2a22"/><rect x="182" y="440" width="140" height="4" fill="#2f2a22"/><circle cx="352" cy="437" r="4" fill="#c9bf98"/><circle cx="366" cy="437" r="4" fill="#9dbb82"/>
+<text x="176" y="485">SAT01 · RHEL 9.8 · FIPS</text>
+<text x="176" y="503" fill="#9dbb82">● STIG PROFILE APPLIED</text>
+</g>
+<g stroke="#6b5a45" stroke-width="2" stroke-dasharray="6 8"><path d="M400 370 H470"/><path d="M520 370 H585"/></g>
+<g stroke="#d68068" stroke-width="2.4" stroke-linecap="round"><path d="M484 358 l24 24 M508 358 l-24 24"/></g>
+<text x="440" y="410" font-family="Inter,sans-serif" font-size="12" letter-spacing="2" fill="#a89a84">AIR GAP</text>
+<g stroke="#5b4c3a" stroke-width="1.5"><path d="M110 525 H450"/></g>
+</svg></div>
+<div class="copy">
+<div class="eyebrow">Let's build something secure together</div>
+<h1>Disconnected Satellite <em>&amp;</em> STIG&#8209;Hardened RHEL</h1>
+<p>A hand-held build guide: from an empty vSphere VM to a working Red Hat Satellite 6.19 server with no internet, FIPS mode, and the DISA STIG profile. Every command, every flag, and every symbol is explained in plain English.</p>
+<div class="btns"><a class="btn" href="#s0" data-start>Start the Build <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 8v10H8"/></svg></a><button class="btn ghost" data-tab-go="trouble">Troubleshooting</button></div>
+<div class="stats"><div><b>11</b><span>Stages</span></div><div><b id="stat-tasks">100+</b><span>Checklist tasks</span></div><div><b>0</b><span>Internet required</span></div></div>
+</div>
+</section>
+<main>
+
+
+<!-- STEP 0 -->
+<section class="step" id="s0" data-title="0 · Start Here">
+<span class="tag">Step 0</span>
+<h2>Start Here: What You're Building and How to Read This Guide</h2>
+
+<p class="story">Your organization runs many Red Hat Enterprise Linux (RHEL) servers on a network with <b>no internet connection</b>. That's called an <b>air-gapped</b> or <b>disconnected</b> network. Those servers still need software and updates. <b>Red Hat Satellite</b> is the answer: it's a private "app store and update center" that lives <i>inside</i> your network. You load software into Satellite by hand (from DVDs and approved transfer media), and every other server gets its software from Satellite instead of the internet.</p>
+<p class="story">In this guide you build that Satellite server from nothing: an empty virtual machine, the operating system, the network, the security hardening, and finally Satellite itself.</p>
+
+<div class="box why"><b class="h">💡 Why is this so careful?</b>
+<p>This server is built to <b>DISA STIG</b> rules. STIGs are the U.S. Department of Defense's security checklists, and they decide things like how disks are split up, how passwords work, and which ports can be open. Many steps look "extra." They exist because an auditor will check them.</p></div>
+
+<h3>Words to know</h3>
+<p>You'll see these words on every page. Come back here whenever one feels fuzzy.</p>
+<div class="tablewrap"><table class="gloss">
+<tr><th>Word</th><th>What it means in plain English</th></tr>
+<tr><td>Server / VM</td><td>A computer that provides a service to other computers. A <b>VM</b> (virtual machine) is a computer made of software, running on a bigger physical machine called an <b>ESXi host</b>. You manage VMs in <b>vSphere</b>.</td></tr>
+<tr><td>ISO</td><td>A single file that is an exact copy of a DVD. You "insert" it into the VM's virtual DVD drive.</td></tr>
+<tr><td>Terminal / shell</td><td>The text screen where you type commands. The program reading your commands is called the <b>shell</b> (on RHEL it's called <code>bash</code>).</td></tr>
+<tr><td>Command</td><td>One instruction you type and run by pressing Enter, like <code>ls</code> ("list files").</td></tr>
+<tr><td>Flag / option</td><td>Extra settings added to a command, usually starting with <code>-</code> or <code>--</code>. <code>ls -l</code> means "list files, <b>long</b> format."</td></tr>
+<tr><td>root</td><td>The all-powerful administrator account on Linux. Like "Administrator" on Windows.</td></tr>
+<tr><td>sudo</td><td>"Do this one thing as root." You type your own password, not root's.</td></tr>
+<tr><td>File path</td><td>A file's address. <code>/etc/fstab</code> means "the file <code>fstab</code> inside the folder <code>etc</code>, which is inside the top folder <code>/</code>." Linux uses forward slashes. <code>/</code> by itself is the very top folder.</td></tr>
+<tr><td>Directory</td><td>Linux's word for a folder.</td></tr>
+<tr><td>Partition / filesystem</td><td>A disk split into separate sections. Each section has its own fixed size and can't overflow into another.</td></tr>
+<tr><td>Mount</td><td>Connecting a disk (or ISO) to a folder so you can open it. Like plugging in a USB stick and having it show up as a drive letter on Windows, except on Linux it shows up as a folder.</td></tr>
+<tr><td>Package / RPM</td><td>A piece of software packed into one installable file (<code>.rpm</code>). Like an <code>.msi</code> on Windows.</td></tr>
+<tr><td>Repository (repo)</td><td>A collection of packages the system is allowed to install from. Like a shelf in a store.</td></tr>
+<tr><td>dnf</td><td>RHEL's package installer. It finds packages in repos and installs them. (<code>yum</code> is its older name and still works.)</td></tr>
+<tr><td>Service</td><td>A program that runs in the background all the time, like a web server.</td></tr>
+<tr><td>systemd / systemctl</td><td>systemd starts and stops every service. <code>systemctl</code> is the command you use to talk to it.</td></tr>
+<tr><td>IP address</td><td>A computer's number on the network, like a street address (for example <code>10.10.208.50</code>).</td></tr>
+<tr><td>Port</td><td>A numbered door on a server. One IP can run many services, each behind its own port. Web pages use 443, SSH uses 22, and Cockpit uses 9090 by default.</td></tr>
+<tr><td>Firewall</td><td>The gatekeeper that decides which ports outside computers may knock on. On RHEL it's <code>firewalld</code>.</td></tr>
+<tr><td>SELinux</td><td>A second, stricter guard <i>inside</i> the server. Even if the firewall lets traffic in, SELinux decides which programs may use which ports and files.</td></tr>
+<tr><td>DNS</td><td>The network's phone book: it turns names into IP addresses and back.</td></tr>
+<tr><td>FQDN</td><td>Fully Qualified Domain Name: a server's full name, like <code>sat01.lab.example</code>, not just <code>sat01</code>.</td></tr>
+<tr><td>Certificate</td><td>A digital ID card that proves a server is who it says it is. Your browser checks it before showing a secure page.</td></tr>
+<tr><td>CA</td><td>Certificate Authority: the trusted office that signs ID cards. If your computer trusts the CA, it trusts every certificate the CA signed.</td></tr>
+<tr><td>PKI</td><td>Public Key Infrastructure: the whole system of CAs, rules, and people that issues certificates. The DoD runs its own, called the <b>DoD PKI</b>.</td></tr>
+<tr><td>Private key</td><td>The secret half of a server's identity. Whoever has it can pretend to be the server, so it never leaves the server.</td></tr>
+<tr><td>Cockpit</td><td>A web page for managing a Linux server from your browser (logs, terminal, files).</td></tr>
+</table></div>
+
+<h3>How to read a command (the symbols)</h3>
+<p>Commands are built from small pieces. Here are the symbols this guide uses. You don't need to memorize them, since each command block explains its own pieces again.</p>
+<div class="tablewrap"><table class="gloss">
+<tr><th>Symbol</th><th>What it does</th><th>Everyday comparison</th></tr>
+<tr><td><code>&gt;</code></td><td>Send the command's output <b>into a file</b>, <b>erasing</b> whatever was in the file before.</td><td>Pouring water into a glass after dumping out what was in it.</td></tr>
+<tr><td><code>&gt;&gt;</code></td><td>Send the output into a file, <b>adding to the end</b> and keeping what's there.</td><td>Topping off the glass.</td></tr>
+<tr><td><code>|</code></td><td>"Pipe": hand one command's output to the next command.</td><td>An assembly line: station 1 passes its work to station 2.</td></tr>
+<tr><td><code>&amp;&amp;</code></td><td>Run the next command <b>only if</b> the first one worked.</td><td>"Unlock the door, and <i>if that worked</i>, walk in."</td></tr>
+<tr><td><code>;</code></td><td>Run the next command no matter what happened.</td><td>"Do this, then do that."</td></tr>
+<tr><td><code>\</code> at line end</td><td>"This command continues on the next line." It lets one long command be written on several lines.</td><td>A hyphen at the end of a line in a book.</td></tr>
+<tr><td><code>#</code> at line start</td><td>A comment. The computer ignores the line. It's a note for humans.</td><td>A sticky note.</td></tr>
+<tr><td><code>*</code></td><td>Wildcard: "anything." <code>*.rpm</code> means "every file ending in .rpm."</td><td>A blank in a crossword that any letter fits.</td></tr>
+<tr><td><code>' '</code> single quotes</td><td>"Take this text exactly as written. Don't interpret any symbols in it."</td><td>Putting something in a sealed envelope.</td></tr>
+</table></div>
+
+<h3 id="flags101">Flags: when to use one dash (<code>-</code>) or two (<code>--</code>)</h3>
+<p>Flags are the extra settings after a command. You'll see two styles, and they usually do <b>the same job</b>. One is short and quick to type; the other is a full word that's easier to read.</p>
+
+<div class="box rule"><b class="h">🔒 The fixed rules</b>
+<ol>
+<li><b>One dash + one letter = a short flag.</b> <code>ls -a</code> means "list <b>a</b>ll files."</li>
+<li><b>Two dashes + a word = a long flag.</b> <code>ls --all</code> is the exact same thing, spelled out.</li>
+<li><b>Short flags can be stacked behind one dash.</b> <code>ss -tlnp</code> is the same as <code>ss -t -l -n -p</code>. <b>Long flags can never be stacked</b>; each one gets its own <code>--</code>: <code>ss --tcp --listening --numeric --processes</code>.</li>
+<li><b>Some flags need a value after them.</b> Short: a space, then the value: <code>findmnt -o TARGET</code>. Long: an <code>=</code> or a space: <code>findmnt --output=TARGET</code>.</li>
+<li><b>Two dashes all alone (<code>--</code>) means "no more flags after this."</b> Everything after it is treated as a name, even if it starts with a dash.</li>
+<li><b>A letter only means something inside its own command.</b> <code>-p</code> is a good example. It means something different in almost every command (see the table below). Never assume. Check the command's help.</li>
+</ol></div>
+
+<div class="box choice"><b class="h">🔀 Which one should you use?</b>
+<ul>
+<li><b>Typing at the terminal:</b> short flags. They're faster, and it's what you'll see in most examples.</li>
+<li><b>Writing scripts, Ansible playbooks, or documentation:</b> long flags. Someone reading <code>--human-readable</code> six months from now knows what it does; <code>-h</code> makes them look it up.</li>
+<li>Both work the same. It's a readability choice, not a right-or-wrong choice.</li>
+</ul></div>
+
+<h4>The same letter, different meanings: <code>-p</code></h4>
+<div class="tablewrap"><table>
+<tr><th>Command</th><th>What <code>-p</code> means there</th><th>Long form</th><th>Example</th></tr>
+<tr><td><code>mkdir</code></td><td>Make <b>p</b>arent folders too, and don't complain if it already exists</td><td><code>--parents</code></td><td><code>mkdir -p /media/rhel</code><br><code>mkdir --parents /media/rhel</code></td></tr>
+<tr><td><code>ss</code></td><td>Show the <b>p</b>rocess (program) behind each port</td><td><code>--processes</code></td><td><code>ss -tlnp</code><br><code>ss --tcp --listening --numeric --processes</code></td></tr>
+<tr><td><code>semanage port</code></td><td>The network <b>p</b>rotocol (tcp or udp)</td><td><code>--proto</code></td><td><code>semanage port -a -t websm_port_t -p tcp 9091</code><br><code>semanage port --add --type websm_port_t --proto tcp 9091</code></td></tr>
+<tr><td><code>systemctl show</code></td><td>Which <b>p</b>roperty to show</td><td><code>--property</code></td><td><code>systemctl show cockpit.socket -p Listen</code><br><code>systemctl show cockpit.socket --property=Listen</code></td></tr>
+<tr><td><code>ssh</code></td><td>Which <b>p</b>ort to connect to</td><td>(none)</td><td><code>ssh -p 22 <span class="v" data-v="STAGEUSER"></span>@<span class="v" data-v="FQDN"></span></code></td></tr>
+</table></div>
+
+<h4>Short and long forms of the flags this guide uses</h4>
+<div class="tablewrap"><table>
+<tr><th>Command</th><th>Short</th><th>Long</th><th>What it does</th><th>Example (short → long)</th></tr>
+<tr><td><code>ls</code></td><td><code>-a</code></td><td><code>--all</code></td><td>Include hidden files</td><td><code>ls -a /media/rhel</code><br><code>ls --all /media/rhel</code></td></tr>
+<tr><td><code>ls</code></td><td><code>-d</code></td><td><code>--directory</code></td><td>Show the folder itself, not what's inside</td><td><code>ls -ld /var/local/rpm-staging</code><br><code>ls -l --directory /var/local/rpm-staging</code></td></tr>
+<tr><td><code>df</code></td><td><code>-h</code></td><td><code>--human-readable</code></td><td>Sizes in G/T instead of raw numbers</td><td><code>df -h /var/lib/pulp</code><br><code>df --human-readable /var/lib/pulp</code></td></tr>
+<tr><td><code>dnf</code></td><td><code>-y</code></td><td><code>--assumeyes</code></td><td>Answer "yes" automatically</td><td><code>dnf install -y cockpit</code><br><code>dnf install --assumeyes cockpit</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-i</code></td><td><code>--ignore-case</code></td><td>Upper/lower case doesn't matter</td><td><code>grep -i error app.log</code><br><code>grep --ignore-case error app.log</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-n</code></td><td><code>--line-number</code></td><td>Show line numbers</td><td><code>grep -n ' /tmp ' /etc/fstab</code><br><code>grep --line-number ' /tmp ' /etc/fstab</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-E</code></td><td><code>--extended-regexp</code></td><td>Allow "either/or" patterns like <code>a|b</code></td><td><code>grep -E 'pool|server' /etc/chrony.conf</code><br><code>grep --extended-regexp 'pool|server' /etc/chrony.conf</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-q</code></td><td><code>--quiet</code></td><td>Print nothing; just succeed or fail</td><td><code>grep -q '^server' /etc/chrony.conf</code><br><code>grep --quiet '^server' /etc/chrony.conf</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-w</code></td><td><code>--word-regexp</code></td><td>Match whole words only</td><td><code>grep -w 9091</code><br><code>grep --word-regexp 9091</code></td></tr>
+<tr><td><code>grep</code></td><td><code>-l</code></td><td><code>--files-with-matches</code></td><td>Show only file names that match</td><td><code>grep -l '^enabled=1' /etc/yum.repos.d/*.repo</code><br><code>grep --files-with-matches '^enabled=1' /etc/yum.repos.d/*.repo</code></td></tr>
+<tr><td><code>ss</code></td><td><code>-t -l -n</code></td><td><code>--tcp --listening --numeric</code></td><td>TCP only, listening only, numbers not names</td><td><code>ss -tln</code><br><code>ss --tcp --listening --numeric</code></td></tr>
+<tr><td><code>curl</code></td><td><code>-s</code></td><td><code>--silent</code></td><td>No progress bar</td><td><code>curl -s https://localhost:9091</code><br><code>curl --silent https://localhost:9091</code></td></tr>
+<tr><td><code>curl</code></td><td><code>-k</code></td><td><code>--insecure</code></td><td>Skip the certificate check</td><td><code>curl -k https://localhost:9091</code><br><code>curl --insecure https://localhost:9091</code></td></tr>
+<tr><td><code>curl</code></td><td><code>-I</code></td><td><code>--head</code></td><td>Fetch only the page header</td><td><code>curl -I https://<span class="v" data-v="FQDN"></span></code><br><code>curl --head https://<span class="v" data-v="FQDN"></span></code></td></tr>
+<tr><td><code>semanage port</code></td><td><code>-a</code> / <code>-t</code> / <code>-l</code></td><td><code>--add</code> / <code>--type</code> / <code>--list</code></td><td>Add a rule / its SELinux type / list rules</td><td><code>semanage port -l</code><br><code>semanage port --list</code></td></tr>
+<tr><td><code>sed</code></td><td><code>-i</code></td><td><code>--in-place</code></td><td>Save the edit into the file</td><td><code>sed -i 's/^pool /#pool /' /etc/chrony.conf</code><br><code>sed --in-place 's/^pool /#pool /' /etc/chrony.conf</code></td></tr>
+<tr><td><code>tail</code></td><td><code>-f</code></td><td><code>--follow</code></td><td>Keep showing new lines as they arrive</td><td><code>tail -f /var/log/secure</code><br><code>tail --follow /var/log/secure</code></td></tr>
+<tr><td><code>journalctl</code></td><td><code>-u</code> / <code>-b</code></td><td><code>--unit</code> / <code>--boot</code></td><td>Which service / since last boot</td><td><code>journalctl -u cockpit -b</code><br><code>journalctl --unit=cockpit --boot</code></td></tr>
+<tr><td><code>findmnt</code> / <code>lsblk</code></td><td><code>-o</code></td><td><code>--output</code></td><td>Choose which columns to show</td><td><code>findmnt -o TARGET,OPTIONS /tmp</code><br><code>findmnt --output=TARGET,OPTIONS /tmp</code></td></tr>
+<tr><td><code>findmnt</code></td><td><code>-t</code></td><td><code>--types</code></td><td>Only these filesystem types</td><td><code>findmnt -t iso9660</code><br><code>findmnt --types=iso9660</code></td></tr>
+<tr><td><code>mount</code></td><td><code>-o</code></td><td><code>--options</code></td><td>Mount options</td><td><code>mount -o ro /dev/sr1 /media/sat6</code><br><code>mount --options ro /dev/sr1 /media/sat6</code></td></tr>
+<tr><td><code>rpm</code></td><td><code>-q</code> / <code>-K</code></td><td><code>--query</code> / <code>--checksig</code></td><td>Ask about packages / check signatures</td><td><code>rpm -K pkg.rpm</code><br><code>rpm --checksig pkg.rpm</code></td></tr>
+<tr><td><code>hostname</code></td><td><code>-f</code></td><td><code>--fqdn</code></td><td>Print the full name</td><td><code>hostname -f</code><br><code>hostname --fqdn</code></td></tr>
+<tr><td><code>systemctl</code></td><td>(none)</td><td><code>--now</code></td><td>Also start it right now</td><td><code>systemctl enable --now cockpit.socket</code> (only a long form exists)</td></tr>
+<tr><td><code>firewall-cmd</code></td><td>(none)</td><td><code>--permanent</code>, <code>--reload</code>, …</td><td>firewall-cmd only has long flags</td><td><code>firewall-cmd --permanent --add-service=cockpit</code></td></tr>
+</table></div>
+
+<h4>The two-dash stop sign: <code>--</code> by itself</h4>
+<p>Sometimes a file name starts with a dash, and the command thinks it's a flag. Putting <code>--</code> in front says "flags are over; what follows is just a name."</p>
+<pre><span class="lbl">bash — example</span>touch -- -test.txt
+ls -l -- -test.txt
+rm -- -test.txt</pre>
+<dl class="flags">
+<dt>touch -- -test.txt</dt><dd>Create an empty file literally named <code>-test.txt</code>. Without <code>--</code>, touch would complain that <code>-t</code> is a flag it wasn't expecting like that.</dd>
+<dt>ls -l -- -test.txt</dt><dd><code>-l</code> is a real flag (before the stop sign). <code>-test.txt</code> comes after it, so it's a file name.</dd>
+<dt>rm -- -test.txt</dt><dd>Delete it, same idea.</dd>
+</dl>
+
+<div class="box warn"><b class="h">📣 Commands that break the rule</b>
+<ul>
+<li><b>One dash + a whole word:</b> some older tools do this. <code>find /var -type f -name '*.rpm'</code> (not <code>--type</code>), and <code>openssl req -new -key cockpit.key -out cockpit.csr</code>. For these, <code>-name</code> is <b>one</b> flag, not <code>-n -a -m -e</code>.</li>
+<li><b>No dashes at all:</b> subcommands are plain words. <code>systemctl restart</code>, <code>nmcli connection modify</code>, <code>hammer repository list</code>. The words come first; flags come after.</li>
+<li><b>PowerShell (Windows):</b> always one dash + a word, and capital letters don't matter: <code>Test-NetConnection -ComputerName sat01 -Port 9091</code>.</li>
+</ul></div>
+
+<h4>How to look up any flag yourself</h4>
+<pre><span class="lbl">bash</span>ss --help
+man ss</pre>
+<dl class="flags">
+<dt>--help</dt><dd>Almost every command prints a short list of its flags, both short and long forms side by side, like <code>-p, --processes</code>.</dd>
+<dt>man ss</dt><dd>Opens the full <b>man</b>ual. Inside it, type <code>/-p</code> and press Enter to jump to <code>-p</code>, press <kbd>n</kbd> for the next match, and press <kbd>q</kbd> to quit.</dd>
+</dl>
+
+<div class="box why" id="heredoc"><b class="h">💡 What does <code>cat &gt; file &lt;&lt;'EOF'</code> really mean? (You'll use it a lot.)</b>
+<p>Many steps need you to create a small settings file. The usual way is to open a text editor, but editors are clumsy inside the vSphere console. This trick lets you type the whole file right in the terminal instead:</p>
+<pre><span class="lbl">example</span>cat &gt; /etc/example.conf &lt;&lt;'EOF'
+line one of the file
+line two of the file
+EOF</pre>
+<p>Read it left to right like a sentence:</p>
+<ol>
+<li><code>cat</code> means "take what I give you and hand it back out." By itself it just repeats text.</li>
+<li><code>&gt; /etc/example.conf</code> means "don't show that text on screen. Put it into this file instead." If the file already exists, it is <b>replaced</b>.</li>
+<li><code>&lt;&lt;</code> means "the text I'm giving you is coming <b>right here, on the next lines</b>, not from another file." This is called a <b>here-document</b> ("the input is <i>here</i>").</li>
+<li><code>EOF</code> is the <b>stop word</b>. It stands for "End Of File." It tells the shell: "keep reading lines until you see a line that says only <code>EOF</code>." The stop word isn't saved into the file. You could use any word, like <code>DONE</code>. <code>EOF</code> is just the tradition, so everyone recognizes it.</li>
+<li>The <b>quotes</b> around <code>'EOF'</code> mean "copy every line <b>exactly</b>." Without them, the shell would try to "fill in" anything starting with <code>$</code> (it would think <code>$HOME</code> is a variable and swap in your home folder). With the quotes, what you type is what goes in the file.</li>
+</ol>
+<p><b>In one sentence:</b> "Create this file, and here is everything that goes in it, up to the word EOF."</p>
+<p>📣 The final <code>EOF</code> line must be alone on its line, with no spaces before or after it. If the terminal shows a <code>&gt;</code> prompt and seems stuck, it's still waiting for that line. Type <code>EOF</code> and press Enter.</p></div>
+
+<h3>Your values</h3>
+<p>Every environment has its own names and addresses. Type yours below and every command in this guide updates to use them. Text highlighted like <span class="v" data-v="FQDN"></span> is one of these values. They are saved only in this browser.</p>
+<div class="vars" id="varform"></div>
+<button class="reset" id="resetvars">Reset values to defaults</button>
+
+<div class="box warn"><b class="h">📣 Keep real values out of GitHub</b>
+<p>The defaults are made-up lab values. Type real hostnames and IPs only here in your browser. Never commit them to the repo or show them in portfolio screenshots.</p></div>
+
+<h3>Rules this guide always follows</h3>
+<div class="box rule"><b class="h">🔒 Always true in this guide</b>
+<ul>
+<li><b>You work as root.</b> Log in as your normal user, then type <code>sudo -i</code> once. <code>sudo</code> means "as the administrator," and <code>-i</code> means "give me a full administrator session." After that, the prompt ends in <code>#</code> instead of <code>$</code>, and you never need to type <code>sudo</code> again.</li>
+<li><b>Keep the vSphere console open.</b> It's like plugging a keyboard and monitor straight into the server. It still works when the network, SSH, or Cockpit are broken.</li>
+<li><b>Check before moving on.</b> Every step ends with a ✔ Checkpoint. If a checkpoint fails, stop and fix it first. Problems pile up otherwise.</li>
+<li><b>Order matters.</b> For example, Cockpit must move off port 9090 <i>before</i> Satellite is installed, because Satellite needs 9090.</li>
+</ul></div>
+
+<h3>What you need before you start</h3>
+<ol class="do">
+<li><span class="t">Permission in vSphere to create a VM on the approved host, folder, and datastore (the <b>datastore</b> is the storage where VM disks and ISOs live).</span></li>
+<li><span class="t"><code>rhel-9.8-x86_64-dvd.iso</code>, the full RHEL DVD (not the small "boot" ISO), uploaded to the datastore.</span></li>
+<li><span class="t"><code>Satellite-6.19.1-rhel-9-x86_64.dvd.iso</code> uploaded to the datastore.</span></li>
+<li><span class="t">Your approved server name, IP addresses, gateway, DNS servers, and time server, typed into the form above.</span></li>
+<li><span class="t">Someone who can add records in Windows DNS.</span></li>
+<li><span class="t">A PKI contact (the people who run your certificate authority). Only needed for the trusted certificate in Step 6.</span></li>
+<li><span class="t">The approved process for moving files onto the air-gapped network.</span></li>
+</ol>
+
+<div class="box warn"><b class="h">📣 Three wrong passwords locks you out</b>
+<p>STIG locks an account after <b>3 failed logins</b>, and it usually stays locked until an admin unlocks it. That can include root. Know your root password and keep vSphere console access before you start. The unlock steps are on the <a href="#" data-goto="t-faillock">Troubleshooting tab</a>.</p></div>
+</section>
+
+<!-- STEP 1 -->
+<section class="step" id="s1" data-title="1 · Create the VM">
+<span class="tag">Step 1</span>
+<h2>Create the Empty VM in vSphere</h2>
+<p class="story">First you build the "computer": an empty VM with the right amount of processing power, memory, and disks. Nothing is installed yet. Think of it as buying the hardware.</p>
+
+<div class="box why"><b class="h">💡 Why two separate disks?</b>
+<p>The small disk (200 GB) holds only the operating system. The big disk (2 TB) holds Satellite's software library, which keeps growing. If the library ever fills its disk, the operating system is on a different disk, so the server can still boot and you can still log in to fix it. It's like keeping your kitchen and your warehouse in separate buildings.</p></div>
+
+<h3>1a. Name, location, and operating system type</h3>
+<ol class="do">
+<li><span class="t">In vSphere, right-click the approved ESXi host → <b>New Virtual Machine</b> → <b>Create a new virtual machine</b> → Next.</span></li>
+<li><span class="t">Name it <span class="v" data-v="FQDN"></span> and pick the approved folder → Next.</span></li>
+<li><span class="t">Confirm the host (the "compute resource") → Next.</span></li>
+<li><span class="t">Pick the approved datastore → Next.</span></li>
+<li><span class="t">Compatibility: use your environment's approved level → Next.</span></li>
+<li><span class="t">Guest OS family <b>Linux</b>, version <b>Red Hat Enterprise Linux 9 (64-bit)</b> → Next. This tells vSphere which drivers to expect.</span></li>
+</ol>
+
+<h3>1b. The virtual hardware</h3>
+<div class="tablewrap"><table>
+<tr><th>Setting</th><th>Value</th><th>Plain-English reason</th></tr>
+<tr><td>CPU</td><td>8 vCPU</td><td>Processing power. Satellite needs at least 4; 8 makes installs and syncs faster.</td></tr>
+<tr><td>Memory</td><td>32 GiB</td><td>Working memory. 32 GiB is Satellite's documented minimum.</td></tr>
+<tr><td>Hard disk 1</td><td>200 GB</td><td>The operating system's disk.</td></tr>
+<tr><td>Hard disk 2 (<b>Add New Device</b>)</td><td>2 TB</td><td>Satellite's library, database, and logs.</td></tr>
+<tr><td>Network adapter 1</td><td>208 Network, <b>Connected unchecked</b></td><td>The network "cable" is unplugged on purpose, so nothing reaches the network during install. You plug it in during Step 4.</td></tr>
+<tr><td>USB controller (<b>Add New Device</b>)</td><td>xHCI</td><td>USB 3 support for approved transfer drives. Don't swap it for the older EHCI+UHCI type.</td></tr>
+<tr><td>CD/DVD drive 1</td><td>Datastore ISO File → <code>rhel-9.8-x86_64-dvd.iso</code>, <b>Connect At Power On checked</b></td><td>"Inserts" the RHEL DVD so the VM boots from it.</td></tr>
+<tr><td>VM Options → Boot Options → Firmware</td><td>EFI</td><td>The modern startup system (replaces old "BIOS"). Set it now. Changing it after install breaks booting.</td></tr>
+</table></div>
+<ol class="do">
+<li><span class="t">Set every value in the table.</span></li>
+<li><span class="t">Compare the summary page against the table, then click <b>Finish</b>.</span></li>
+</ol>
+
+<div class="check"><b class="h">✔ Checkpoint 1</b>
+<ol class="do">
+<li><span class="t">The VM has 8 vCPU, 32 GiB memory, EFI, a 200 GB disk, a 2 TB disk, and xHCI USB.</span></li>
+<li><span class="t">Network adapter 1 is on the 208 Network and <b>not</b> connected. The DVD drive holds the RHEL ISO.</span></li>
+</ol></div>
+
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul>
+<li><b>xHCI isn't in the list</b> → the VM's compatibility level is too old. Ask your vSphere admin. Don't downgrade the USB type.</li>
+<li><b>You can't find the ISO</b> → you're in the wrong datastore, or your account can't browse it.</li>
+</ul></div>
+</section>
+
+<!-- STEP 2 -->
+<section class="step" id="s2" data-title="2 · Test the DVD Boots">
+<span class="tag">Step 2</span>
+<h2>Test That the VM Boots From the RHEL DVD</h2>
+<p class="story">Before installing anything, make sure the right DVD is in the drive and it works. This takes two minutes and catches the most common setup mistake: the wrong ISO.</p>
+
+<ol class="do">
+<li><span class="t">Select the VM → <b>Launch Remote Console</b> (or <b>Launch Web Console</b>). This is your screen and keyboard for the VM.</span></li>
+<li><span class="t">Power on the VM.</span></li>
+<li><span class="t">You should see a menu with <b>Install Red Hat Enterprise Linux 9.8</b>.</span></li>
+<li><span class="t">Choose it and wait for the installer's <b>Installation Summary</b> screen. (The installer is called <b>Anaconda</b>.) <b>Don't</b> start installing yet.</span></li>
+<li><span class="t">Look at <b>Installation Source</b>. It should say <b>Local media</b> with no warning. That means the installer found all the software on the DVD.</span></li>
+<li><span class="t">Power off the VM from vSphere.</span></li>
+</ol>
+
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul>
+<li><b>You see a Satellite screen or a "rescue" menu</b> → the Satellite ISO is in the drive. It can't boot a computer. Swap it for <code>rhel-9.8-x86_64-dvd.iso</code>.</li>
+<li><b>Installation Source shows an error</b> → you used the small "boot" ISO, which has no software on it. Use the full DVD ISO.</li>
+</ul></div>
+
+<div class="check"><b class="h">✔ Checkpoint 2</b>
+<ol class="do">
+<li><span class="t">The installer reached Installation Summary, the source said "Local media," and the network was still unplugged.</span></li>
+<li><span class="t">Screenshot saved for your portfolio.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 3 -->
+<section class="step" id="s3" data-title="3 · Install RHEL (STIG)">
+<span class="tag">Step 3</span>
+<h2>Install RHEL 9.8: FIPS, STIG, and Separate Partitions</h2>
+<p class="story">Now you install the operating system. Three security choices happen here, and they're hard to add later. <b>FIPS</b> means only government-approved encryption. <b>STIG</b> means the DoD security checklist is applied automatically. <b>Separate partitions</b> means each important folder gets its own fenced-off space on the disk.</p>
+
+<div class="box why"><b class="h">💡 Why does STIG want separate partitions?</b>
+<p>Picture one big room where everything is stored. If one pile grows out of control, like logs from a noisy program, it fills the whole room and the system crashes. Separate partitions are <b>walls</b>: each folder gets its own room with a fixed size. If the log room fills up, the operating system's room is untouched.</p>
+<p>Walls also let you put <b>rules on each room</b>, called mount options:</p>
+<ul>
+<li><code>noexec</code>: "nothing in this room may run as a program." It stops an attacker from dropping a program into a temp folder and running it.</li>
+<li><code>nosuid</code>: "ignore special 'run as admin' markers on files here." It blocks a common privilege trick.</li>
+<li><code>nodev</code>: "no device files here." Device files are special files that talk directly to hardware.</li>
+</ul>
+<p>Those rules can only be set on a whole partition, never on a single folder. That's why STIG requires the walls.</p></div>
+
+<h3>3a. Start the installer in FIPS mode</h3>
+<ol class="do">
+<li><span class="t">Power on the VM. At the menu, highlight <b>Install Red Hat Enterprise Linux 9.8</b> and press <kbd>e</kbd> ("edit this boot option").</span></li>
+<li><span class="t">Find the line that starts with <code>linuxefi</code> or <code>linux</code>. Move to the <b>end</b> of that line and type a space, then <code>fips=1</code>.</span></li>
+<li><span class="t">Press <kbd>Ctrl</kbd>+<kbd>X</kbd> to start with that change.</span></li>
+</ol>
+<div class="box why"><b class="h">💡 What is FIPS, and why turn it on this early?</b>
+<p><b>FIPS 140</b> is a U.S. government standard that lists which encryption methods are approved. <code>fips=1</code> tells the installer "use only approved encryption from the first second." During install, the system creates its own secret keys (for example, SSH keys that prove the server's identity). If FIPS is already on, those keys are made the approved way. Turning FIPS on later would leave keys that were made the unapproved way. Also, since RHEL 9.6, picking the STIG profile no longer turns FIPS on for you, so you must do this yourself.</p></div>
+
+<h3>3b. Software and security profile</h3>
+<ol class="do">
+<li><span class="t"><b>Software Selection</b> → <b>Server</b> (no desktop) or <b>Minimal Install</b>. Add nothing extra. Less software means fewer things to patch and secure.</span></li>
+<li><span class="t"><b>Security Profile</b> → select <b>DISA STIG for Red Hat Enterprise Linux 9</b> → <b>Select profile</b> → Done. The installer will now apply hundreds of security settings for you.</span></li>
+<li><span class="t">Leave <b>Network &amp; Host Name</b> alone. The network is unplugged on purpose.</span></li>
+<li><span class="t"><b>Time &amp; Date</b>: pick your time zone. The time server comes in Step 4.</span></li>
+</ol>
+
+<h3>3c. Split up the disks</h3>
+<p>This is the biggest part of the install. You'll use <b>LVM</b> (Logical Volume Manager). LVM pools a disk's space into a <b>volume group</b>, then carves that pool into <b>logical volumes</b> (the "rooms"). The big advantage: you can make a room bigger later without reinstalling.</p>
+
+<div class="box rule"><b class="h">🔒 Always true for the disk layout</b>
+<ul>
+<li>The 200 GB disk gets its own pool named <code>rhel</code> (operating system). The 2 TB disk gets its own pool named <code>data</code> (Satellite). The two never mix.</li>
+<li>These folders <b>must</b> each get their own room (STIG): <code>/boot</code>, <code>/boot/efi</code>, <code>/home</code>, <code>/tmp</code>, <code>/var</code>, <code>/var/log</code>, <code>/var/log/audit</code>, <code>/var/tmp</code>.</li>
+<li>Satellite's two heaviest folders also get their own rooms: <code>/var/lib/pulp</code> (the software library) and <code>/var/lib/pgsql</code> (the database).</li>
+<li>Leave some of the <code>data</code> pool unused, so you have room to grow later.</li>
+</ul></div>
+<div class="box choice"><b class="h">🔀 Your choice</b><p>The <b>sizes</b> below are a sensible start, not a rule. You can grow any room later. What must not change is <b>which folders get their own room</b>.</p></div>
+
+<div class="tablewrap"><table>
+<tr><th>Folder (mount point)</th><th>Size</th><th>Type</th><th>Disk / pool</th><th>What lives there</th></tr>
+<tr><td><code>/boot/efi</code></td><td>600 MiB</td><td>EFI System Partition</td><td>200 GB disk</td><td>Startup files the EFI firmware reads first</td></tr>
+<tr><td><code>/boot</code></td><td>2 GiB</td><td>XFS, standard partition</td><td>200 GB disk</td><td>The Linux kernel (core of the OS)</td></tr>
+<tr><td><code>swap</code></td><td>4 GiB</td><td>LVM</td><td><code>rhel</code></td><td>Overflow space when memory is full</td></tr>
+<tr><td><code>/</code></td><td>150 GiB</td><td>XFS, LVM</td><td><code>rhel</code></td><td>The operating system itself ("root" folder)</td></tr>
+<tr><td><code>/home</code></td><td>10 GiB</td><td>XFS, LVM</td><td><code>rhel</code></td><td>Users' personal folders</td></tr>
+<tr><td><code>/var</code></td><td>250 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Data that changes: caches, queues, service data</td></tr>
+<tr><td><code>/var/lib/pulp</code></td><td>1200 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Satellite's software library (the biggest)</td></tr>
+<tr><td><code>/var/lib/pgsql</code></td><td>50 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Satellite's database</td></tr>
+<tr><td><code>/var/log</code></td><td>20 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Log files</td></tr>
+<tr><td><code>/var/log/audit</code></td><td>20 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Security audit records (who did what)</td></tr>
+<tr><td><code>/var/tmp</code></td><td>20 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Temporary files that survive a reboot</td></tr>
+<tr><td><code>/tmp</code></td><td>20 GiB</td><td>XFS, LVM</td><td><code>data</code></td><td>Temporary files</td></tr>
+</table></div>
+<p><b>XFS</b> is the type of filesystem ("the way files are organized inside a room"). It's RHEL's default. The <code>data</code> pool uses about 1,600 GiB of roughly 1,860 GiB, leaving about 260 GiB to grow into.</p>
+
+<h4>First, the operating system disk</h4>
+<ol class="do">
+<li><span class="t"><b>Installation Destination</b> → check <b>only the 200 GB disk</b>. Leave the 2 TB disk unchecked for now.</span></li>
+<li><span class="t">Under Storage Configuration choose <b>Custom</b> → Done.</span></li>
+<li><span class="t">In the partitioning scheme dropdown pick <b>LVM</b>.</span></li>
+<li><span class="t">Click <b>+</b> and add <code>/boot/efi</code> 600 MiB, then <code>/boot</code> 2 GiB. Click each one and set <b>Device Type</b> to <b>Standard Partition</b>. (The computer must read these before LVM starts, so they can't be inside LVM.)</span></li>
+<li><span class="t">Add <code>swap</code> 4 GiB, <code>/</code> 150 GiB, and <code>/home</code> 10 GiB. Check that each shows Volume Group <b>rhel</b>.</span></li>
+<li><span class="t">Done → <b>Accept Changes</b>.</span></li>
+</ol>
+<h4>Then, the data disk</h4>
+<ol class="do">
+<li><span class="t">Open <b>Installation Destination</b> again. Check <b>both</b> disks → Custom → Done.</span></li>
+<li><span class="t">Add <code>/var</code> 250 GiB. In its <b>Volume Group</b> dropdown choose <b>Create a new volume group</b>.</span></li>
+<li><span class="t">Name it <code>data</code>, select <b>only the 2 TB disk</b>, leave RAID as is, set Size policy to <b>As large as possible</b> → Save.</span></li>
+<li><span class="t">Check that <code>/var</code> now says Volume Group <b>data</b>.</span></li>
+<li><span class="t">Add the rest, each in pool <b>data</b>: <code>/var/lib/pulp</code> 1200 GiB, <code>/var/lib/pgsql</code> 50 GiB, <code>/var/log</code> 20 GiB, <code>/var/log/audit</code> 20 GiB, <code>/var/tmp</code> 20 GiB, <code>/tmp</code> 20 GiB.</span></li>
+<li><span class="t">Compare every row with the table → Done → <b>Accept Changes</b>.</span></li>
+</ol>
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul>
+<li><b><code>/</code> or the <code>rhel</code> pool is on both disks</b> → click <b>Reset All</b> and redo "First, the operating system disk." Nothing is written to disk until you click Begin Installation, so this is safe.</li>
+<li><b>The dropdown only shows <code>rhel</code></b> → you haven't created <code>data</code> yet. Pick <b>Create a new volume group</b>.</li>
+<li><b>The STIG profile shows a partition warning</b> → one of the required folders is missing. Compare with the table.</li>
+</ul></div>
+
+<h3>3d. Accounts</h3>
+<ol class="do">
+<li><span class="t"><b>Root Password</b>: set the approved root password.</span></li>
+<li><span class="t"><b>User Creation</b>: create your admin account <span class="v" data-v="STAGEUSER"></span> and check <b>Make this user administrator</b> (this lets it use <code>sudo</code>).</span></li>
+</ol>
+<div class="box warn"><b class="h">📣 The console can mistype symbols</b>
+<p>The vSphere console sends <i>which key you pressed</i>, not <i>which letter you meant</i>. If your computer's keyboard layout doesn't match what the VM expects, symbols like <code>@ # $ \ |</code> can come out different. Password typing is hidden, so you'd never see it, and 3 misses locks you out.</p>
+<p>For your first login, pick a password (STIG still needs 15+ characters with upper, lower, a number, and a symbol) whose symbol you've <b>tested</b> in the console first. Safe bets are <code>-</code> and <code>.</code>. Change it later from SSH or Cockpit if you like.</p></div>
+
+<h3>3e. Install and first boot</h3>
+<ol class="do">
+<li><span class="t">Check that every item on the summary is ready → <b>Begin Installation</b>. This is when the disks are actually written.</span></li>
+<li><span class="t">When it finishes, <b>don't click Reboot yet</b>. In vSphere: Edit Settings → CD/DVD drive 1 → uncheck <b>Connect At Power On</b> → OK. Otherwise the VM boots from the DVD again and restarts the installer.</span></li>
+<li><span class="t">Now click <b>Reboot System</b>.</span></li>
+<li><span class="t">Log in on the console as <span class="v" data-v="STAGEUSER"></span>, then type <code>sudo -i</code> and your password. The prompt should end in <code>#</code>, which means you're root.</span></li>
+</ol>
+
+<h3>3f. Check the install worked</h3>
+<pre><span class="lbl">bash</span>cat /etc/redhat-release
+cat /proc/sys/crypto/fips_enabled
+fips-mode-setup --check
+getenforce</pre>
+<dl class="flags">
+<dt>cat</dt><dd>"Show me what's inside this file."</dd>
+<dt>/etc/redhat-release</dt><dd>A one-line file that says which RHEL version is installed.</dd>
+<dt>/proc/sys/crypto/fips_enabled</dt><dd>A live "switch" the kernel exposes as a file. <code>1</code> = FIPS on, <code>0</code> = off.</dd>
+<dt>fips-mode-setup --check</dt><dd>A FIPS tool. <code>--check</code> means "just tell me the status, don't change anything."</dd>
+<dt>getenforce</dt><dd>"Is SELinux enforcing its rules right now?"</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>Red Hat Enterprise Linux release 9.8 (Plow)</code>, then <code>1</code>, then <code>FIPS mode is enabled.</code>, then <code>Enforcing</code>.</div>
+
+<pre><span class="lbl">bash — check that every room exists</span>findmnt -t xfs,vfat -o TARGET,SOURCE,SIZE,OPTIONS
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS
+vgs</pre>
+<dl class="flags">
+<dt>findmnt</dt><dd>"Find mounts": lists every connected filesystem (every room).</dd>
+<dt>-t xfs,vfat</dt><dd><b>t</b>ype filter: only show XFS rooms and the vfat (EFI) room. Hides dozens of internal system entries.</dd>
+<dt>-o TARGET,SOURCE,SIZE,OPTIONS</dt><dd><b>o</b>utput only these columns: the folder, the disk piece behind it, its size, and its rules (mount options).</dd>
+<dt>lsblk</dt><dd>"List block devices": draws a tree of disks → pieces → LVM rooms, so you can see which disk each room sits on.</dd>
+<dt>-o NAME,SIZE,TYPE,MOUNTPOINTS</dt><dd>Only these columns.</dd>
+<dt>vgs</dt><dd>"Volume groups summary": shows each pool and how much is still unused (<code>VFree</code>).</dd>
+</dl>
+<div class="expect"><b>You should see:</b> one line per folder from the table. In <code>lsblk</code>, <code>rhel-…</code> rooms appear only under the 200 GB disk and <code>data-…</code> rooms only under the 2 TB disk. <code>vgs</code> shows free space left in <code>data</code>.</div>
+
+<h3>3g. Check the STIG room rules</h3>
+<p>The STIG profile already wrote these rules into <code>/etc/fstab</code>. <b>fstab</b> ("filesystem table") is the list the server reads at every boot to know which room connects to which folder, and with what rules. Confirm the rules took effect:</p>
+<div class="tablewrap"><table>
+<tr><th>Folder</th><th>STIG expects</th></tr>
+<tr><td><code>/boot</code></td><td>nodev, nosuid</td></tr>
+<tr><td><code>/boot/efi</code></td><td>nosuid</td></tr>
+<tr><td><code>/home</code></td><td>nodev, nosuid, noexec</td></tr>
+<tr><td><code>/tmp</code></td><td>nodev, nosuid, noexec <b>(see the Satellite exception below)</b></td></tr>
+<tr><td><code>/var</code></td><td>nodev</td></tr>
+<tr><td><code>/var/log</code>, <code>/var/log/audit</code>, <code>/var/tmp</code></td><td>nodev, nosuid, noexec</td></tr>
+<tr><td><code>/dev/shm</code> (lives in memory, not on disk)</td><td>nodev, nosuid, noexec</td></tr>
+</table></div>
+<pre><span class="lbl">bash</span>findmnt -o TARGET,OPTIONS /tmp /var/tmp /home /var/log /var/log/audit /dev/shm</pre>
+<dl class="flags">
+<dt>findmnt</dt><dd>List mounted rooms.</dd>
+<dt>-o TARGET,OPTIONS</dt><dd>Only show the folder and its rules.</dd>
+<dt>/tmp /var/tmp …</dt><dd>Naming folders limits the list to just these.</dd>
+</dl>
+
+<div class="box warn"><b class="h">📣 The one place STIG and Satellite disagree: /tmp</b>
+<p>STIG says <code>/tmp</code> should be <code>noexec</code> (no programs run there). Satellite's installer <b>needs</b> to run small helper programs from <code>/tmp</code> and fails without that. The accepted fix: remove <code>noexec</code> from <code>/tmp</code> <b>only</b>, keep <code>nodev</code> and <code>nosuid</code>, and <b>write it down as an approved exception</b> (a POA&amp;M or risk acceptance) with your ISSO. That way an auditor sees a documented decision, not a mistake.</p></div>
+<pre><span class="lbl">bash — only if /tmp shows noexec</span>grep -n ' /tmp ' /etc/fstab
+sed -i '/[[:space:]]\/tmp[[:space:]]/ s/noexec,\?//; /[[:space:]]\/tmp[[:space:]]/ s/,\([[:space:]]\)/\1/' /etc/fstab
+grep -n ' /tmp ' /etc/fstab
+systemctl daemon-reload
+mount -o remount,exec /tmp
+findmnt -o TARGET,OPTIONS /tmp</pre>
+<dl class="flags">
+<dt>grep</dt><dd>"Search for text." Finds lines in a file that contain what you typed.</dd>
+<dt>-n</dt><dd>Show the line <b>n</b>umber, so you can see exactly which line you're about to change.</dd>
+<dt>' /tmp '</dt><dd>The text to find. The spaces stop it from matching <code>/var/tmp</code>.</dd>
+<dt>sed</dt><dd>"Stream editor": finds and replaces text automatically.</dd>
+<dt>-i</dt><dd>Edit the file <b>i</b>n place (save the change), instead of just printing the result.</dd>
+<dt>s/noexec,\?//</dt><dd><code>s/old/new/</code> means "substitute." Here it replaces <code>noexec</code> (and a comma after it, if there is one) with nothing, which deletes it. The part before <code>s</code> limits this to the <code>/tmp</code> line only.</dd>
+<dt>second s/…/</dt><dd>Tidies up a leftover comma if <code>noexec</code> was last in the list.</dd>
+<dt>systemctl daemon-reload</dt><dd>Tells systemd "re-read your settings." systemd builds its mount list from fstab, so it has to re-read after any edit.</dd>
+<dt>mount -o remount,exec /tmp</dt><dd><code>-o</code> passes options. <code>remount</code> means "change the rules now without disconnecting." <code>exec</code> means "allow programs again."</dd>
+</dl>
+<div class="expect"><b>You should see:</b> the <code>/tmp</code> line in fstab and the <code>findmnt</code> output both show <code>nodev,nosuid</code> and no <code>noexec</code>. If the <code>sed</code> result looks wrong, fix the line by hand with <code>vi /etc/fstab</code>. A broken fstab line can stop the next boot.</div>
+
+<div class="check"><b class="h">✔ Checkpoint 3</b>
+<ol class="do">
+<li><span class="t">RHEL 9.8, FIPS = 1, SELinux Enforcing.</span></li>
+<li><span class="t">Every folder from the table is its own room, in the right pool.</span></li>
+<li><span class="t">STIG rules are in place, and <code>/tmp</code> has no <code>noexec</code> (exception written down).</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 4 -->
+<section class="step" id="s4" data-title="4 · Network, DNS, Time">
+<span class="tag">Step 4</span>
+<h2>Give the Server Its Network, Name, and Clock</h2>
+<p class="story">A server on a network needs three things to be trusted: a fixed <b>address</b> (IP), a <b>name</b> everyone agrees on (DNS), and the <b>correct time</b>. Satellite is picky about all three.</p>
+
+<div class="box why"><b class="h">💡 Why does Satellite care so much?</b>
+<p>When Satellite installs, it writes its own name into its ID cards (certificates), its database, and dozens of settings. If the name, the DNS "phone book" entry, and the reverse lookup (IP back to name) don't all agree, the install fails or builds a broken server. Time matters because ID cards have start and end dates. If the server's clock is wrong, it thinks valid cards are expired or not valid yet.</p></div>
+
+<h3>4a. Plug in both network "cables"</h3>
+<div class="box warn"><b class="h">📣 Don't forget adapter 1</b><p>Adapter 1 has been unplugged since Step 1. If you only add adapter 2, the main address, gateway, and DNS never work, and it looks like everything else is broken.</p></div>
+<ol class="do">
+<li><span class="t">vSphere → Edit Settings → Network adapter 1 (208 Network): check <b>Connected</b> and <b>Connect At Power On</b>.</span></li>
+<li><span class="t"><b>Add New Device</b> → Network Adapter → pick the .210 repository network → check <b>Connected</b> and <b>Connect At Power On</b>.</span></li>
+<li><span class="t">Click OK.</span></li>
+</ol>
+
+<h3>4b. Set the server's name</h3>
+<pre><span class="lbl">bash</span>hostnamectl set-hostname <span class="v" data-v="FQDN"></span>
+hostnamectl status --static</pre>
+<dl class="flags">
+<dt>hostnamectl</dt><dd>The tool that controls the server's name.</dd>
+<dt>set-hostname</dt><dd>"Set the permanent name to this." It's saved in <code>/etc/hostname</code>.</dd>
+<dt>status --static</dt><dd>"Show me only the permanent (static) name."</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <span class="v" data-v="FQDN"></span>. Always the full name, never the short one.</div>
+
+<h3>4c. Find what the network cards are called</h3>
+<pre><span class="lbl">bash</span>nmcli device status
+nmcli connection show</pre>
+<dl class="flags">
+<dt>nmcli</dt><dd>The command-line tool for <b>N</b>etwork<b>M</b>anager, the program that manages network settings on RHEL.</dd>
+<dt>device status</dt><dd>Lists the network <b>cards</b> (hardware) and whether each is connected.</dd>
+<dt>connection show</dt><dd>Lists saved <b>connections</b> (settings profiles). A card is the hardware; a connection is the settings that card uses.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> two ethernet cards, often named <code>ens192</code> and <code>ens224</code>. Type the .208 one in the <b>NIC1</b> field at the top of the page and the .210 one in <b>NIC2</b>.</div>
+
+<h3>4d. Main network card (.208): fixed address, gateway, DNS</h3>
+<pre><span class="lbl">bash</span>nmcli connection modify <span class="v" data-v="NIC1"></span> \
+  ipv4.method manual \
+  ipv4.addresses <span class="v" data-v="IP"></span>/<span class="v" data-v="PREFIX"></span> \
+  ipv4.gateway <span class="v" data-v="GW"></span> \
+  ipv4.dns "<span class="v" data-v="DNS1"></span> <span class="v" data-v="DNS2"></span>" \
+  ipv4.dns-search <span class="v" data-v="DOMAIN"></span> \
+  connection.autoconnect yes
+nmcli connection up <span class="v" data-v="NIC1"></span></pre>
+<dl class="flags">
+<dt>connection modify NAME</dt><dd>"Change the settings of this connection." Nothing takes effect until the <code>up</code> command at the end.</dd>
+<dt>\</dt><dd>"This command continues on the next line." All seven lines are one command.</dd>
+<dt>ipv4.method manual</dt><dd>"I'll set the address myself." No DHCP, which is the automatic address handout. Servers need addresses that never change.</dd>
+<dt>ipv4.addresses IP/PREFIX</dt><dd>The server's address. The <code>/24</code> part (the prefix) says how big the local network is. It's required.</dd>
+<dt>ipv4.gateway</dt><dd>The router, the "exit door" to reach other networks. Only this card gets one.</dd>
+<dt>ipv4.dns "A B"</dt><dd>The two phone-book (DNS) servers. Quotes keep both addresses together as one value.</dd>
+<dt>ipv4.dns-search</dt><dd>If you type a short name like <code>sat01</code>, add this domain to it automatically.</dd>
+<dt>connection.autoconnect yes</dt><dd>Turn this connection on by itself at every boot.</dd>
+<dt>connection up NAME</dt><dd>"Turn it on now," applying the new settings.</dd>
+</dl>
+
+<h3>4e. Second card (.210): the repository network</h3>
+<pre><span class="lbl">bash</span>nmcli connection add con-name repository-network ifname <span class="v" data-v="NIC2"></span> type ethernet \
+  ipv4.method manual \
+  ipv4.addresses <span class="v" data-v="IP210"></span> \
+  ipv4.never-default yes \
+  connection.autoconnect yes
+nmcli connection up repository-network</pre>
+<dl class="flags">
+<dt>connection add</dt><dd>"Create a new settings profile."</dd>
+<dt>con-name repository-network</dt><dd>The name you're giving the profile. Any name works; this one describes its job.</dd>
+<dt>ifname NIC2</dt><dd>Which network card (<b>i</b>nter<b>f</b>ace) it belongs to.</dd>
+<dt>type ethernet</dt><dd>The kind of connection. Wired cards are always <code>ethernet</code>.</dd>
+<dt>ipv4.method manual</dt><dd>Fixed address, no DHCP.</dd>
+<dt>ipv4.addresses</dt><dd>The address <b>with</b> its <code>/24</code>. There's no gateway line on purpose.</dd>
+<dt>ipv4.never-default yes</dt><dd>"Never use this card as the main exit door." All normal traffic keeps using .208, which avoids confusing routing.</dd>
+<dt>connection.autoconnect yes</dt><dd>Turn on at every boot.</dd>
+<dt>connection up</dt><dd>Turn it on now.</dd>
+</dl>
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul><li><b><code>nmcli connection show</code> already lists something like "Wired connection 1" on NIC2</b> → RHEL made an automatic profile. Delete it first with <code>nmcli connection delete "Wired connection 1"</code> (the quotes keep the spaces together as one name). Otherwise two profiles fight over the same card.</li></ul></div>
+
+<h3>4f. Check the network</h3>
+<pre><span class="lbl">bash</span>ip -4 address show
+ip -4 route show
+cat /etc/resolv.conf</pre>
+<dl class="flags">
+<dt>ip</dt><dd>The low-level network tool.</dd>
+<dt>-4</dt><dd>Only show IPv4 (the familiar 4-number addresses). Hides IPv6 noise.</dd>
+<dt>address show</dt><dd>Which address each card has.</dd>
+<dt>route show</dt><dd>The "map" of where traffic goes. The <code>default</code> line is the main exit door.</dd>
+<dt>cat /etc/resolv.conf</dt><dd>Shows the DNS servers the system is actually using.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <span class="v" data-v="IP"></span> on NIC1 and the .210 address on NIC2. Exactly <b>one</b> line starting <code>default via <span class="v" data-v="GW"></span></code>. Both DNS servers in resolv.conf.</div>
+
+<h3>4g. Add the server to the DNS phone book (Windows DNS)</h3>
+<p>Two entries are needed. An <b>A record</b> is name → IP ("look up sat01, get 10.10.208.50"). A <b>PTR record</b> is IP → name, the reverse lookup. Satellite checks both.</p>
+<ol class="do">
+<li><span class="t">On an approved DNS server, open <b>DNS Manager</b> → Forward Lookup Zones → right-click your zone → <b>New Host (A or AAAA)</b>.</span></li>
+<li><span class="t">Name: the first part of your FQDN. Check that the full name shown reads <span class="v" data-v="FQDN"></span>.</span></li>
+<li><span class="t">IP: <span class="v" data-v="IP"></span>. Check <b>Create associated pointer (PTR) record</b> → Add Host.</span></li>
+<li><span class="t">Open Reverse Lookup Zones and confirm the PTR record is there. If not, the reverse zone doesn't exist yet. Ask the DNS admin.</span></li>
+</ol>
+<pre><span class="lbl">bash — back on the server</span>getent hosts <span class="v" data-v="FQDN"></span>
+getent hosts <span class="v" data-v="IP"></span>
+hostname -f</pre>
+<dl class="flags">
+<dt>getent hosts NAME</dt><dd>"Look up this name the same way the system would." This is a forward lookup, name → IP.</dd>
+<dt>getent hosts IP</dt><dd>The reverse lookup, IP → name.</dd>
+<dt>hostname -f</dt><dd>"What's my <b>f</b>ull name?"</dd>
+</dl>
+<div class="expect"><b>You should see:</b> all three agree on <span class="v" data-v="FQDN"></span> ↔ <span class="v" data-v="IP"></span>. If they don't, <b>stop here</b>. Don't go on to Satellite until they match.</div>
+
+<details><summary>Optional: let this lab look up names in a production DNS zone</summary>
+<p>Only if the lab must find names in production. It needs a network path and port 53 (DNS) open from the lab's DNS servers to production's.</p>
+<ol class="do">
+<li><span class="t">On the lab DNS server: DNS Manager → right-click <b>Conditional Forwarders</b> → New Conditional Forwarder. (This says "for names ending in X, ask those servers.")</span></li>
+<li><span class="t">Enter the production zone name and both production DNS server IPs. Only choose "store in Active Directory" if the DNS team approves.</span></li>
+<li><span class="t">Test from the server: <code>getent hosts &lt;a-production-name&gt;</code>.</span></li>
+</ol></details>
+
+<h3>4h. Set the clock source (chrony)</h3>
+<div class="box why"><b class="h">💡 Why the clock needs a source</b><p>Computer clocks drift a few seconds a day. Normally servers correct themselves from internet time servers, but this network has no internet. So you point the server at an <b>internal time server</b> your team runs. The time program on RHEL is <b>chrony</b>, and its settings file is <code>/etc/chrony.conf</code>.</p></div>
+<pre><span class="lbl">bash</span>grep -nE '^(pool|server)' /etc/chrony.conf
+sed -i 's/^pool /#pool /' /etc/chrony.conf
+grep -q '^server <span class="v" data-v="NTP"></span>' /etc/chrony.conf || echo 'server <span class="v" data-v="NTP"></span> iburst' &gt;&gt; /etc/chrony.conf
+systemctl restart chronyd
+chronyc sources -v
+chronyc tracking</pre>
+<dl class="flags">
+<dt>grep -nE '^(pool|server)'</dt><dd>Show the lines that name time sources. <code>-n</code> adds line numbers. <code>-E</code> turns on "either/or" patterns. <code>^</code> means "at the start of the line," and <code>(pool|server)</code> means "pool OR server."</dd>
+<dt>sed -i 's/^pool /#pool /'</dt><dd>Adds a <code>#</code> in front of every <code>pool</code> line, turning them into comments. Those are internet time servers this network can't reach.</dd>
+<dt>grep -q … ||</dt><dd><code>-q</code> means "quiet: just tell me yes or no." <code>||</code> means "if the answer was <b>no</b>, run the next part." So the server line is added only if it isn't already there.</dd>
+<dt>echo '…' &gt;&gt; file</dt><dd><code>echo</code> prints the text, and <code>&gt;&gt;</code> <b>adds</b> it to the end of the file.</dd>
+<dt>iburst</dt><dd>"Send a quick burst of requests at startup," so the clock syncs in seconds instead of minutes.</dd>
+<dt>systemctl restart chronyd</dt><dd>Restart the time service so it reads the new setting. (<code>chronyd</code> is the service; the <code>d</code> means "daemon," a background program.)</dd>
+<dt>chronyc sources -v</dt><dd>List the time sources. <code>-v</code> (verbose) adds a legend explaining the symbols.</dd>
+<dt>chronyc tracking</dt><dd>Shows how far off the clock currently is.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> your time server marked <code>^*</code> (the <code>*</code> means "currently using this one") and a tiny "System time" offset in <code>tracking</code>. If STIG already added approved <code>server</code> lines, keep them.</div>
+
+<div class="check"><b class="h">✔ Checkpoint 4</b>
+<ol class="do">
+<li><span class="t">Both network cards connected. One default route, via .208.</span></li>
+<li><span class="t">Name, forward lookup, and reverse lookup all match.</span></li>
+<li><span class="t">chrony is synced to the internal time server.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 5 -->
+<section class="step" id="s5" data-title="5 · Local Software Shelf">
+<span class="tag">Step 5</span>
+<h2>Build an Offline Software Shelf and Install Cockpit</h2>
+<p class="story">To install anything, <code>dnf</code> needs a <b>repository</b>, a shelf of packages. Normally that shelf is on Red Hat's website. Here you turn the RHEL DVD itself into the shelf, and make sure it's still there after every reboot.</p>
+
+<h3>5a. Put the RHEL DVD back in the drive</h3>
+<ol class="do">
+<li><span class="t">vSphere → Edit Settings → CD/DVD drive 1 → Datastore ISO File = <code>rhel-9.8-x86_64-dvd.iso</code>. <b>Check</b> <b>Connected</b> and <b>Connect At Power On</b> again. You turned Connect At Power On off in Step 3.</span></li>
+</ol>
+
+<h3>5b. Connect the DVD to a folder, permanently</h3>
+<div class="box why"><b class="h">💡 Why use the DVD's label?</b>
+<p>Linux names DVD drives <code>/dev/sr0</code>, <code>/dev/sr1</code>, and so on, in the order it finds them. When you add a second DVD in Step 7, those names can <b>swap</b> after a reboot, and you'd connect the wrong disc. Every ISO also has a <b>label</b> (like a name written on the disc) that never changes. Connecting by label always gets the right one.</p></div>
+<pre><span class="lbl">bash</span>blkid /dev/sr0</pre>
+<dl class="flags">
+<dt>blkid</dt><dd>"Block ID": shows a disk's label, its unique ID, and its filesystem type.</dd>
+<dt>/dev/sr0</dt><dd>The first DVD drive. <code>/dev</code> is where Linux lists all hardware.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> something like <code>LABEL="RHEL-9-8-0-BaseOS-x86_64"</code>. Copy the exact label into the <b>RHEL ISO label</b> field at the top of the page.</div>
+<pre><span class="lbl">bash</span>mkdir -p /media/rhel
+echo 'LABEL=<span class="v" data-v="RHEL_LABEL"></span> /media/rhel iso9660 ro,nofail 0 0' &gt;&gt; /etc/fstab
+systemctl daemon-reload
+mount /media/rhel
+ls -a /media/rhel</pre>
+<dl class="flags">
+<dt>mkdir -p /media/rhel</dt><dd>"Make directory": creates the folder where the DVD will appear. <code>-p</code> means "don't complain if it already exists."</dd>
+<dt>echo '…' &gt;&gt; /etc/fstab</dt><dd>Adds one line to the boot-time mount list. It <b>must</b> be <code>&gt;&gt;</code> (add). A single <code>&gt;</code> would erase every other line, and the server wouldn't boot.</dd>
+<dt>LABEL=…</dt><dd>"Find the disc by this label," not by its drive name.</dd>
+<dt>/media/rhel</dt><dd>The folder where the DVD's contents will show up.</dd>
+<dt>iso9660</dt><dd>The type of filesystem DVDs use.</dd>
+<dt>ro</dt><dd><b>R</b>ead-<b>o</b>nly. You can't write to a DVD anyway.</dd>
+<dt>nofail</dt><dd>"If the DVD isn't there, keep booting." Without it, a missing DVD would freeze the boot in emergency mode.</dd>
+<dt>0 0</dt><dd>Two old settings: "don't back this up" and "don't disk-check it at boot."</dd>
+<dt>systemctl daemon-reload</dt><dd>Makes systemd re-read fstab.</dd>
+<dt>mount /media/rhel</dt><dd>Connect it now. Giving only the folder makes <code>mount</code> look up the rest in fstab, which also proves your new line works.</dd>
+<dt>ls -a</dt><dd>"List" the folder. <code>-a</code> shows <b>a</b>ll files, including hidden ones that start with a dot.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>.treeinfo</code>, <code>media.repo</code>, <code>BaseOS</code>, and <code>AppStream</code>. If <code>BaseOS</code> or <code>AppStream</code> is missing, it's the wrong ISO.</div>
+
+<h3>5c. Tell dnf about the shelf (one file, used for the whole build)</h3>
+<p>RHEL splits its software into two shelves: <b>BaseOS</b> (the core operating system) and <b>AppStream</b> (applications and tools). You create one settings file that points <code>dnf</code> at both. This uses the <a href="#heredoc"><code>&lt;&lt;'EOF'</code> trick</a> from Step 0.</p>
+<pre><span class="lbl">bash</span>cat &gt; /etc/yum.repos.d/rhel-local.repo &lt;&lt;'EOF'
+[rhel-local-baseos]
+name=RHEL 9.8 BaseOS (local ISO)
+baseurl=file:///media/rhel/BaseOS
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+
+[rhel-local-appstream]
+name=RHEL 9.8 AppStream (local ISO)
+baseurl=file:///media/rhel/AppStream
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+EOF
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+dnf clean all
+dnf repolist</pre>
+<dl class="flags">
+<dt>cat &gt; FILE &lt;&lt;'EOF'</dt><dd>"Create this file with everything I type until the word EOF." See Step 0.</dd>
+<dt>/etc/yum.repos.d/</dt><dd>The folder where <code>dnf</code> looks for shelf definitions. Any file ending in <code>.repo</code> here is read.</dd>
+<dt>[rhel-local-baseos]</dt><dd>The shelf's ID, its short unique name. The square brackets start a new shelf.</dd>
+<dt>name=</dt><dd>A friendly description for humans.</dd>
+<dt>baseurl=file:///…</dt><dd>Where the shelf is. <code>file://</code> means "a folder on this machine" instead of a website. (The third <code>/</code> is the start of the path.)</dd>
+<dt>enabled=1</dt><dd>Turn this shelf on. <code>1</code> = on, <code>0</code> = off.</dd>
+<dt>gpgcheck=1</dt><dd>Check Red Hat's <b>digital signature</b> on every package before installing, like checking the tamper seal on a medicine bottle. <b>Keep it on.</b> STIG requires it.</dd>
+<dt>gpgkey=</dt><dd>Where Red Hat's public "seal checker" key is stored. It's already on the system from the install.</dd>
+<dt>rpm --import</dt><dd>Tell the package system "trust packages sealed with this key."</dd>
+<dt>dnf clean all</dt><dd>Throw away any old saved shelf lists so dnf reads the new file fresh.</dd>
+<dt>dnf repolist</dt><dd>List the shelves dnf can use right now.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>rhel-local-baseos</code> and <code>rhel-local-appstream</code> in the list. A message about "subscription management" is harmless, because this server isn't registered with Red Hat online.</div>
+
+<h3>5d. Install Cockpit and the SELinux tool</h3>
+<pre><span class="lbl">bash</span>dnf install -y cockpit cockpit-files policycoreutils-python-utils</pre>
+<dl class="flags">
+<dt>dnf install</dt><dd>"Install these packages" (plus anything they depend on).</dd>
+<dt>-y</dt><dd>Answer "yes" automatically when it asks "Is this OK?" Leave it off if you want to read the list first.</dd>
+<dt>cockpit</dt><dd>The web management page.</dd>
+<dt>cockpit-files</dt><dd>Adds a file browser to Cockpit (used in the Secret Mission).</dd>
+<dt>policycoreutils-python-utils</dt><dd>Contains <code>semanage</code>, the tool that changes SELinux rules. You need it in Step 6.</dd>
+</dl>
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul>
+<li><b>"No match for argument: cockpit-files"</b> → that package isn't on your DVD. Install the other two and skip the file browser.</li>
+<li><b>"Cannot find a valid baseurl"</b> → the DVD isn't connected. Run <code>findmnt /media/rhel</code> to check.</li>
+<li><b>dnf hangs trying to reach the internet</b> → see <a href="#" data-goto="t-dnfhang">Troubleshooting: dnf hangs</a>.</li>
+</ul></div>
+
+<div class="check"><b class="h">✔ Checkpoint 5</b>
+<ol class="do">
+<li><span class="t">The DVD connects from fstab by label, so it survives a reboot.</span></li>
+<li><span class="t">One repo file, both shelves listed, signature checking on.</span></li>
+<li><span class="t">Cockpit and semanage installed.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 6 -->
+<section class="step" id="s6" data-title="6 · Cockpit on 9091">
+<span class="tag">Step 6</span>
+<h2>Move Cockpit to Port 9091 and Give It a Trusted ID</h2>
+<p class="story">Cockpit normally answers on port 9090. Satellite <b>also</b> needs 9090 for one of its own services (the Capsule/foreman-proxy). Two programs can't share one door, so Cockpit moves next door to 9091 now, before Satellite arrives.</p>
+
+<div class="box rule"><b class="h">🔒 The three-layer rule for ANY port change</b>
+<p>On a hardened RHEL server, a port change has to pass three separate checkpoints. Miss one and it fails, usually with no error message.</p>
+<ol>
+<li><b>The internal guard (SELinux):</b> is the program <i>allowed</i> to use this door?</li>
+<li><b>The outer fence (firewall):</b> may outside traffic <i>reach</i> this door?</li>
+<li><b>The service itself (systemd):</b> is the program actually <i>standing behind</i> this door?</li>
+</ol>
+<p>This is always true, for every service. Moving SSH to 2222 or Apache to 8080 works the same way; only the names change.</p></div>
+
+<h3>6a. Make sure 9091 is free</h3>
+<pre><span class="lbl">bash</span>ss -tlnp | grep -E ':909[01]\b'
+semanage port -l | grep -w 9091</pre>
+<dl class="flags">
+<dt>ss</dt><dd>"Socket statistics": shows which doors (ports) are open and which program is behind each.</dd>
+<dt>-t</dt><dd>Only <b>T</b>CP connections (web traffic is TCP).</dd>
+<dt>-l</dt><dd>Only doors that are <b>l</b>istening, waiting for visitors.</dd>
+<dt>-n</dt><dd>Show port <b>n</b>umbers (<code>9090</code>) instead of names.</dd>
+<dt>-p</dt><dd>Show the <b>p</b>rogram behind each door.</dd>
+<dt>| grep -E ':909[01]\b'</dt><dd>Keep only lines for port 9090 or 9091. <code>[01]</code> means "0 or 1," and <code>\b</code> stops it matching 90901.</dd>
+<dt>semanage port -l</dt><dd>List (<code>-l</code>) every port SELinux knows about and who may use it.</dd>
+<dt>grep -w</dt><dd>Match the whole <b>w</b>ord 9091 only.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> nothing about 9091 in either. If something already uses 9091, stop and pick another port.</div>
+
+<h3>6b. Layer 1: the internal guard (SELinux)</h3>
+<pre><span class="lbl">bash</span>semanage port -a -t websm_port_t -p tcp 9091</pre>
+<dl class="flags">
+<dt>semanage port</dt><dd>"Manage SELinux's port rules."</dd>
+<dt>-a</dt><dd><b>A</b>dd a new rule.</dd>
+<dt>-t websm_port_t</dt><dd>The <b>t</b>ype, the SELinux "badge" Cockpit carries. <code>websm</code> is short for "web systems management." Any port with this badge is one Cockpit may use.</dd>
+<dt>-p tcp</dt><dd>The <b>p</b>rotocol.</dd>
+<dt>9091</dt><dd>The port getting the badge.</dd>
+</dl>
+<div class="box ift"><b class="h">🔧 If this happens</b><ul><li><b>"Port tcp/9091 already defined"</b> → it was added earlier. That's fine, keep going.</li></ul></div>
+
+<h3>6c. Layer 2: the outer fence (firewall)</h3>
+<pre><span class="lbl">bash</span>firewall-cmd --permanent --add-service=cockpit
+firewall-cmd --permanent --service=cockpit --add-port=9091/tcp
+firewall-cmd --permanent --service=cockpit --remove-port=9090/tcp
+firewall-cmd --reload
+firewall-cmd --info-service=cockpit
+firewall-cmd --list-services</pre>
+<dl class="flags">
+<dt>firewall-cmd</dt><dd>The tool that controls the firewall.</dd>
+<dt>--permanent</dt><dd>"Save this change so it survives a reboot." Permanent changes don't take effect until <code>--reload</code>.</dd>
+<dt>--add-service=cockpit</dt><dd>"Let Cockpit traffic through the fence."</dd>
+<dt>--service=cockpit --add-port=9091/tcp</dt><dd>Changes what "Cockpit" <i>means</i> to the firewall: add port 9091 to its definition.</dd>
+<dt>--remove-port=9090/tcp</dt><dd>Take 9090 out of Cockpit's definition, freeing it for Satellite.</dd>
+<dt>--reload</dt><dd>"Apply the saved changes now."</dd>
+<dt>--info-service=cockpit</dt><dd>Show which ports the "cockpit" definition now includes.</dd>
+<dt>--list-services</dt><dd>Show every service allowed through the fence.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>ports: 9091/tcp</code> for cockpit, and <code>cockpit</code> in the services list.</div>
+
+<h3>6d. Layer 3: the service itself (systemd)</h3>
+<p>Cockpit uses <b>socket activation</b>: systemd stands at the door on Cockpit's behalf and wakes Cockpit up only when someone knocks. So you tell <b>systemd</b> which door to stand at. You do it with a small override file called a <b>drop-in</b>, instead of editing Cockpit's original file, so software updates won't undo your change.</p>
+<pre><span class="lbl">bash</span>mkdir -p /etc/systemd/system/cockpit.socket.d
+cat &gt; /etc/systemd/system/cockpit.socket.d/listen.conf &lt;&lt;'EOF'
+[Socket]
+ListenStream=
+ListenStream=9091
+EOF
+systemctl daemon-reload
+systemctl enable --now cockpit.socket
+systemctl restart cockpit.socket
+systemctl show cockpit.socket -p Listen
+ss -tlnp | grep -E ':909[01]\b'</pre>
+<dl class="flags">
+<dt>mkdir -p …cockpit.socket.d</dt><dd>Creates the drop-in folder. Any folder named <code>&lt;unit&gt;.d</code> holds overrides for that unit.</dd>
+<dt>cat &gt; … &lt;&lt;'EOF'</dt><dd>Create the override file with the next three lines (see Step 0).</dd>
+<dt>[Socket]</dt><dd>"These settings are about the door."</dd>
+<dt>ListenStream= (blank)</dt><dd>"Forget the doors you were told about before." This erases the built-in 9090. Without this line, Cockpit would answer on <b>both</b> 9090 and 9091.</dd>
+<dt>ListenStream=9091</dt><dd>"Now stand at door 9091."</dd>
+<dt>systemctl daemon-reload</dt><dd>Make systemd re-read its settings files.</dd>
+<dt>enable --now</dt><dd><code>enable</code> means "start at every boot." <code>--now</code> means "and start it right now too."</dd>
+<dt>restart</dt><dd>Stop and start again so it moves to the new door.</dd>
+<dt>show -p Listen</dt><dd>Show one <b>p</b>roperty, the door it's listening on.</dd>
+<dt>ss -tlnp | grep …</dt><dd>Double-check from the outside, same as 6a.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>Listen=[::]:9091 (Stream)</code>, and <code>ss</code> shows 9091 owned by <code>systemd</code>, with nothing on 9090. Seeing systemd instead of cockpit is correct, since systemd is holding the door.</div>
+<div class="box choice"><b class="h">🔀 Your choice: <code>systemctl edit</code> vs. this method</b><p><code>systemctl edit cockpit.socket</code> does the same job through a text editor, but saves to a file named <code>override.conf</code>. Pick <b>one</b> method. If both files exist, both apply, which gets confusing.</p></div>
+
+<h3>6e. Test it, from the inside out</h3>
+<p>Always test the closest thing first (the server itself), then work outward to your browser. The first test that fails tells you which layer is broken. The full checklist is in <a href="#" data-goto="t-port">Troubleshooting → port won't load</a>.</p>
+<pre><span class="lbl">bash — on the server</span>curl -skI https://localhost:9091 | head -1</pre>
+<dl class="flags">
+<dt>curl</dt><dd>A command-line web browser.</dd>
+<dt>-s</dt><dd><b>S</b>ilent: no progress bar.</dd>
+<dt>-k</dt><dd>Skip the certificate (ID card) check. This test only asks "is Cockpit answering at all?"</dd>
+<dt>-I</dt><dd>Only fetch the page's header, not the whole page.</dd>
+<dt>https://localhost:9091</dt><dd><code>localhost</code> means "this same machine."</dd>
+<dt>| head -1</dt><dd>Show only the first line.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a line starting with <code>HTTP/1.1 200</code>. 200 means "OK."</div>
+<pre><span class="lbl">PowerShell — on the Windows jump server</span>Clear-DnsClientCache
+Test-NetConnection -ComputerName <span class="v" data-v="FQDN"></span> -Port 9091</pre>
+<dl class="flags">
+<dt>Clear-DnsClientCache</dt><dd>Makes Windows forget names it looked up earlier, so it asks DNS fresh.</dd>
+<dt>Test-NetConnection</dt><dd>Windows' "can I reach it?" tester.</dd>
+<dt>-ComputerName</dt><dd>Which server. Using the full name tests DNS at the same time.</dd>
+<dt>-Port 9091</dt><dd>Try to knock on this door.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>TcpTestSucceeded : True</code>. Then open Edge to <code>https://<span class="v" data-v="FQDN"></span>:9091</code>.</div>
+
+<h3>6f. Install the trusted certificate chain (recommended)</h3>
+<p>Right now Cockpit shows your browser a <b>self-signed</b> certificate, an ID card it made for itself. Edge doesn't trust that and shows a warning. The fix is to get a card signed by your organization's certificate authority.</p>
+<p>Your Windows DNS servers also run <b>Active Directory Certificate Services (AD CS)</b>, so the organization already has an internal certificate authority. DNS publishes the VM's name, while the CA signs proof that the name belongs to this server.</p>
+
+<div class="box warn"><b class="h">📣 Keep private keys separate</b>
+<p>A private key proves the server's identity. Keep it in its service-specific, root-only location on the server.</p>
+<ul>
+<li>Never transfer <code>/root/cockpit_cert/cockpit.key</code> to AD CS.</li>
+<li>Never place it in <code>/etc/pki/ca-trust/source/anchors/</code>. That folder is for <i>public</i> CA certificates only.</li>
+</ul>
+<p><b>Rule:</b> public certificates travel; private keys never leave the server.</p></div>
+
+<details open><summary>Show the certificate steps</summary>
+<h4>Step A: Get the CA's public certificate</h4>
+<ol class="do">
+<li><span class="t">Ask the PKI owner whether the AD CS instance is the <b>root CA</b> (the top of the chain of trust) or an <b>issuing CA</b> (a middle CA that the root trusts).</span></li>
+<li><span class="t">If it's an issuing CA, use the approved root CA server for the next steps.</span></li>
+<li><span class="t">On the root CA server, open <b>Windows PowerShell as Administrator</b> (right-click → Run as administrator).</span></li>
+<li><span class="t">Export the root CA's public certificate to your Desktop with the commands below.</span></li>
+</ol>
+<pre><span class="lbl">PowerShell — on the root CA server</span>Set-Location "$HOME\Desktop"
+certutil -ca.cert internal-root-ca.cer</pre>
+<dl class="flags">
+<dt>Set-Location</dt><dd>PowerShell's "go to this folder" (like <code>cd</code>).</dd>
+<dt>"$HOME\Desktop"</dt><dd><code>$HOME</code> is your user folder, so this is your Desktop. The quotes keep the path together.</dd>
+<dt>certutil</dt><dd>Windows' built-in certificate tool.</dd>
+<dt>-ca.cert</dt><dd>"Export this CA's own <b>public</b> certificate."</dd>
+<dt>internal-root-ca.cer</dt><dd>The file name to save it as.</dd>
+</dl>
+<div class="box why"><b class="h">💡 Where do the CA files come from?</b>
+<p>The exported <code>internal-root-ca.cer</code> file contains the root CA's <b>public</b> certificate. It does <b>not</b> contain the CA's private key, so it's safe to copy around.</p>
+<p>If AD CS uses an issuing CA, get that public <b>intermediate</b> certificate from the PKI owner as well. The issuing certificate connects the Cockpit certificate to the trusted root, like a middle link in a chain: root → intermediate → Cockpit.</p></div>
+
+<h4>Step B: Teach the RHEL server to trust your CA</h4>
+<ol class="do">
+<li><span class="t">Move the <code>.cer</code> file(s) through the approved transfer process into <code>/etc/pki/ca-trust/source/anchors/</code> on the server. They must be in PEM (Base-64) format. If <code>head -1</code> on the file shows <code>-----BEGIN CERTIFICATE-----</code>, it is.</span></li>
+</ol>
+<pre><span class="lbl">bash</span>update-ca-trust extract</pre>
+<dl class="flags"><dt>update-ca-trust extract</dt><dd>"Rebuild the server's list of trusted CAs, including anything new in the anchors folder."</dd></dl>
+
+<h4>Step C: Make the private key and the certificate request on the server</h4>
+<p>You create two things. The <b>private key</b> is the secret, and it stays here. The <b>CSR</b> (Certificate Signing Request) is a form that says "please sign an ID card for this name." Only the CSR goes to the CA.</p>
+<pre><span class="lbl">bash</span>mkdir -p /root/cockpit_cert &amp;&amp; chmod 700 /root/cockpit_cert
+openssl genrsa -out /root/cockpit_cert/cockpit.key 4096
+chmod 600 /root/cockpit_cert/cockpit.key
+cat &gt; /root/cockpit_cert/openssl.cnf &lt;&lt;'EOF'
+[ req ]
+prompt = no
+distinguished_name = dn
+req_extensions = v3_req
+[ dn ]
+CN = <span class="v" data-v="FQDN"></span>
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = DNS:<span class="v" data-v="FQDN"></span>
+EOF
+openssl req -new -key /root/cockpit_cert/cockpit.key -config /root/cockpit_cert/openssl.cnf -out /root/cockpit_cert/cockpit.csr</pre>
+<dl class="flags">
+<dt>mkdir -p … &amp;&amp; chmod 700</dt><dd>Make a folder, and <i>if that worked</i> (<code>&amp;&amp;</code>) lock it so only root can open it. <code>700</code> = owner can do everything, nobody else can do anything.</dd>
+<dt>openssl</dt><dd>The Swiss-army knife for keys and certificates.</dd>
+<dt>genrsa</dt><dd>"Generate an RSA private key." RSA is a FIPS-approved key type.</dd>
+<dt>-out FILE</dt><dd>Where to save the result.</dd>
+<dt>4096</dt><dd>Key size in bits. Bigger means harder to break.</dd>
+<dt>chmod 600</dt><dd>Lock the key file so only root can read or change it. <code>600</code> = owner read and write, nobody else anything.</dd>
+<dt>prompt = no</dt><dd>"Don't ask me questions; take the answers from this file."</dd>
+<dt>CN =</dt><dd>"Common Name": the server's name on the card.</dd>
+<dt>basicConstraints CA:FALSE</dt><dd>"This card can't sign other cards." It's a server ID, not a CA.</dd>
+<dt>keyUsage / extendedKeyUsage serverAuth</dt><dd>"This card may only be used to prove a server's identity."</dd>
+<dt>subjectAltName = DNS:…</dt><dd>The names the card is valid for. <b>Browsers check this field</b>, so it must match the URL you type exactly.</dd>
+<dt>req -new</dt><dd>"Make a new certificate request."</dd>
+<dt>-key</dt><dd>Which private key to build the request from.</dd>
+<dt>-config</dt><dd>Which settings file to use (the one you just wrote).</dd>
+<dt>-out</dt><dd>Where to save the CSR.</dd>
+</dl>
+<ol class="do">
+<li><span class="t">Transfer <b>only</b> <code>cockpit.csr</code> to AD CS. Have it signed with the approved web server template, in Base-64 (PEM) format.</span></li>
+<li><span class="t">Bring the signed card back and save it as <code>/root/cockpit_cert/cockpit.crt</code>.</span></li>
+</ol>
+
+<h4>Step D: Give the new ID card to Cockpit</h4>
+<pre><span class="lbl">bash</span>cat /root/cockpit_cert/cockpit.crt &gt; /etc/cockpit/ws-certs.d/50-internal.cert
+# only if you have an intermediate CA:
+# cat /etc/pki/ca-trust/source/anchors/intermediate.pem &gt;&gt; /etc/cockpit/ws-certs.d/50-internal.cert
+install -m 600 /root/cockpit_cert/cockpit.key /etc/cockpit/ws-certs.d/50-internal.key
+/usr/libexec/cockpit-certificate-ensure --check
+systemctl restart cockpit.socket</pre>
+<dl class="flags">
+<dt>cat … &gt; …50-internal.cert</dt><dd>Copy the signed card into Cockpit's certificate folder. <code>&gt;</code> creates or replaces the file.</dd>
+<dt># lines</dt><dd>Comments, which do nothing. If you have an intermediate, remove the <code>#</code> from the second one. Its <code>&gt;&gt;</code> <b>adds</b> the intermediate after your card, forming the chain.</dd>
+<dt>install -m 600</dt><dd>Copy the key <b>and</b> lock it to root-only in one step (<code>-m</code> = set <b>m</b>ode, meaning permissions).</dd>
+<dt>50-internal.cert / .key</dt><dd>Cockpit picks the card and key that share the same name and come last alphabetically. The <code>50-</code> makes sure yours wins.</dd>
+<dt>cockpit-certificate-ensure --check</dt><dd>"Which card will you use, and does the key match?" It only checks and changes nothing.</dd>
+<dt>systemctl restart cockpit.socket</dt><dd>Restart so Cockpit picks up the new card.</dd>
+</dl>
+
+<h4>Step E: Teach the Windows workstation to trust your CA</h4>
+<ol class="do">
+<li><span class="t">Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>mmc</code> → File → Add/Remove Snap-in → Certificates → <b>Computer account</b> → Local computer.</span></li>
+<li><span class="t">Look in <b>Trusted Root Certification Authorities</b> for your internal root CA. If it's missing, right-click → Import <code>internal-root-ca.cer</code> there.</span></li>
+<li><span class="t">Import any intermediate into <b>Intermediate Certification Authorities</b>.</span></li>
+<li><span class="t">Open Edge to <code>https://<span class="v" data-v="FQDN"></span>:9091</code>. There should be no warning.</span></li>
+</ol>
+</details>
+<h3>6g. Lab vs. production: what changes when DoD issues the certificate</h3>
+<p class="story">In this lab, <b>your own internal CA</b> (AD CS) signs the certificate. In production on a DoD network, you don't sign it yourself. You send the request to the <b>DoD PKI</b> (Public Key Infrastructure, the DoD's official certificate system), and it sends back an <b>official DoD certificate</b>. The steps on the server look almost the same. What changes is <b>who signs</b>, <b>who is trusted</b>, and <b>how much paperwork</b> is involved.</p>
+
+<div class="box why"><b class="h">💡 Three levels of ID card</b>
+<ul>
+<li><b>Self-signed</b> (Cockpit's default): the server made its own ID card. Like writing your own name on a sticky note. Nobody has a reason to trust it, so browsers warn.</li>
+<li><b>Internal CA</b> (this lab): your organization's own office signs it. Trusted only by computers you told to trust that office. Fine for a lab or a small enclave.</li>
+<li><b>DoD PKI</b> (production): the Department of Defense's official office signs it. DoD computers already trust the DoD root CAs (they're installed by the DoD <b>InstallRoot</b> tool or by group policy), so every DoD workstation trusts your server with no extra setup. Auditors expect this on DoD systems.</li>
+</ul></div>
+
+<div class="tablewrap"><table>
+<tr><th>What</th><th>Lab (internal CA)</th><th>Production (DoD PKI)</th></tr>
+<tr><td>Who signs</td><td>Your AD CS server.</td><td>A DoD issuing CA (for servers, usually one of the <b>DOD SW CA</b> series).</td></tr>
+<tr><td>Who you send the CSR to</td><td>Whoever runs your AD CS.</td><td>Your organization's <b>PKI sponsor</b> or <b>Registration Authority (RA) / Trusted Agent</b>, through the enrollment process your command uses. You can't just sign it yourself.</td></tr>
+<tr><td>Approval</td><td>Usually immediate.</td><td>A formal request that checks you own the server and the name. Expect days, not minutes. Plan it into the schedule.</td></tr>
+<tr><td>Root of trust</td><td>Your internal root CA (you import it everywhere).</td><td>The <b>DoD Root CAs</b>. Already trusted by DoD Windows machines. <b>Not</b> trusted by RHEL out of the box, so you add them (below).</td></tr>
+<tr><td>Chain</td><td>Root → (maybe) your issuing CA → server.</td><td>DoD Root CA → DOD SW CA (intermediate) → your server. You <b>must</b> send the intermediate with your certificate.</td></tr>
+<tr><td>Name on the card</td><td>Whatever you put in the CSR.</td><td>The DoD CA may rewrite the subject into DoD format (e.g. <code>CN=…, OU=PKI, OU=DoD, O=U.S. Government, C=US</code>). What browsers check is the <b>SAN</b> (the DNS name), so that must still match your FQDN exactly.</td></tr>
+<tr><td>Key rules</td><td>Your choice.</td><td>Must follow DoD policy (RSA 2048 is the common minimum). <b>Ask your RA which key sizes they accept</b> before generating the key, because some enrollment systems reject sizes they don't expect.</td></tr>
+<tr><td>Revocation checking</td><td>Usually skipped.</td><td>DoD requires checking whether certificates were cancelled (<b>CRLs</b>, the "cancelled cards" lists). On an air-gapped network you have to bring updated CRLs in regularly, or checks start failing when the old list expires.</td></tr>
+<tr><td>Expiration</td><td>Whatever you set.</td><td>Fixed by DoD policy. Put the expiry date in your calendar and start the renewal request weeks early, since approval takes time.</td></tr>
+<tr><td>Which network</td><td>Lab.</td><td>On <b>NIPRNet</b> (unclassified) it's the DoD PKI. On <b>SIPRNet</b> (classified) it's a separate system, the <b>NSS PKI</b>, with its own roots and its own RA. The steps are the same shape, but the CAs and contacts are different.</td></tr>
+<tr><td>What gets a cert</td><td>Cockpit only (optional).</td><td>Cockpit <b>and</b> Satellite's own web page (port 443). Satellite part below.</td></tr>
+</table></div>
+
+<div class="box rule"><b class="h">🔒 Always true in lab and production</b>
+<ul>
+<li>The private key is made <b>on the server</b> and <b>never leaves it</b>. Only the CSR travels. That's exactly the same with DoD.</li>
+<li>The SAN must match the name people type in the browser.</li>
+<li>You install the certificate <b>plus</b> its intermediate chain, and the key stays <code>chmod 600</code>.</li>
+</ul></div>
+
+<h4>Production step 1: Teach RHEL to trust the DoD roots</h4>
+<p>DISA publishes the DoD root and intermediate CA certificates as a downloadable bundle on the public DoD Cyber Exchange (<code>public.cyber.mil</code>, PKI/PKE section). Download it on an approved connected system, bring it across with the approved transfer process, then:</p>
+<pre><span class="lbl">bash</span>ls *.p7b
+openssl pkcs7 -in <span class="v" data-v="DODBUNDLE"></span> -print_certs -out /etc/pki/ca-trust/source/anchors/dod-cas.pem
+grep -c 'BEGIN CERTIFICATE' /etc/pki/ca-trust/source/anchors/dod-cas.pem
+update-ca-trust extract
+trust list | grep -i 'DoD Root'</pre>
+<dl class="flags">
+<dt>ls *.p7b</dt><dd>Find the bundle file. <code>.p7b</code> (PKCS#7) is a "bag" that holds many certificates in one file.</dd>
+<dt>openssl pkcs7</dt><dd>Open a PKCS#7 bag.</dd>
+<dt>-in FILE</dt><dd>Which bag. Use the file whose name ends in <code>.pem.p7b</code>. If you only have a plain <code>.p7b</code>, add <code>-inform DER</code> ("the file is in binary format").</dd>
+<dt>-print_certs</dt><dd>"Take every certificate out of the bag and write them as normal text certificates."</dd>
+<dt>-out FILE</dt><dd>Save them straight into the trust anchors folder.</dd>
+<dt>grep -c 'BEGIN CERTIFICATE'</dt><dd><code>-c</code> = <b>c</b>ount matching lines. Each certificate starts with that line, so this counts how many you got.</dd>
+<dt>update-ca-trust extract</dt><dd>Rebuild the server's trusted list with the new CAs.</dd>
+<dt>trust list | grep -i 'DoD Root'</dt><dd><code>trust list</code> shows every trusted CA. <code>grep -i</code> finds DoD roots, ignoring upper/lower case.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a count of several dozen certificates, and <code>DoD Root CA</code> entries in the trust list.</div>
+<div class="box warn"><b class="h">📣 Only trust what came from DISA</b><p>Take the bundle only from the official DISA source through your approved transfer process. Adding a CA to the anchors folder tells the server "trust anything this CA signs," so a fake CA there would be a serious hole.</p></div>
+
+<h4>Production step 2: Make the key and CSR</h4>
+<p>Same as Step C above. Only change the key size if your RA requires it (for example <code>2048</code> instead of <code>4096</code>), and use the exact name format they ask for. Then send <b>only</b> <code>cockpit.csr</code> to your PKI sponsor or RA using your command's process.</p>
+
+<h4>Production step 3: Check what DoD sent back</h4>
+<p>You'll get your server certificate, and often the DOD SW CA intermediate. Before installing, check the card is right:</p>
+<pre><span class="lbl">bash</span>openssl x509 -in /root/cockpit_cert/cockpit.crt -noout -subject -issuer -enddate -ext subjectAltName
+openssl verify -CAfile /etc/pki/tls/certs/ca-bundle.crt /root/cockpit_cert/cockpit.crt
+diff &lt;(openssl x509 -in /root/cockpit_cert/cockpit.crt -noout -pubkey) &lt;(openssl pkey -in /root/cockpit_cert/cockpit.key -pubout)</pre>
+<dl class="flags">
+<dt>openssl x509 -in FILE</dt><dd>Read this certificate.</dd>
+<dt>-noout</dt><dd>Don't print the scrambled certificate text.</dd>
+<dt>-subject</dt><dd>Show the name the card was issued to.</dd>
+<dt>-issuer</dt><dd>Show who signed it. It should be a DOD SW CA.</dd>
+<dt>-enddate</dt><dd>Show the expiration date. Put it in your calendar.</dd>
+<dt>-ext subjectAltName</dt><dd>Show the DNS names it's valid for. It must include your FQDN.</dd>
+<dt>openssl verify</dt><dd>"Does this card chain up to a CA I trust?"</dd>
+<dt>-CAfile …ca-bundle.crt</dt><dd>Use the server's full trusted list, which now includes the DoD roots and intermediates from step 1.</dd>
+<dt>diff &lt;(…) &lt;(…)</dt><dd><code>diff</code> compares two things and prints only differences. <code>&lt;( )</code> means "treat this command's output like a file." It compares the public key <b>inside the certificate</b> with the public key <b>made from your private key</b>.</dd>
+<dt>openssl pkey -in KEY -pubout</dt><dd>Read the private key and print only its public half.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> the issuer is a DoD CA, the SAN has your FQDN, <code>verify</code> says <code>OK</code>, and <code>diff</code> prints <b>nothing</b> (nothing printed = the key matches the card). If <code>diff</code> prints lines, this certificate was made from a different key. Don't install it.</div>
+
+<h4>Production step 4: Install it for Cockpit</h4>
+<p>Same as Step D. Put your certificate first, then the DOD SW CA intermediate after it with <code>&gt;&gt;</code> (remove the <code>#</code> on that line). The DoD intermediate is not optional.</p>
+
+<h4>Production step 5: Give Satellite's own web page the DoD certificate</h4>
+<p>In production, Satellite's main page (port 443) needs an official certificate too, not the one it made for itself during install. Satellite's certificate must include the Satellite FQDN in its SAN, so you can reuse the same request process with its own key and CSR (for example in <code>/root/satellite_cert/</code>).</p>
+<pre><span class="lbl">bash</span>cat <span class="v" data-v="DODINTERMEDIATE"></span> <span class="v" data-v="DODROOT"></span> &gt; /root/satellite_cert/dod-chain.pem
+katello-certs-check \
+  -c /root/satellite_cert/satellite.crt \
+  -k /root/satellite_cert/satellite.key \
+  -b /root/satellite_cert/dod-chain.pem</pre>
+<dl class="flags">
+<dt>cat A B &gt; chain.pem</dt><dd>Glue the intermediate and the root into one "chain" file. <code>&gt;</code> creates it.</dd>
+<dt>katello-certs-check</dt><dd>Satellite's certificate checker. It only checks, changing nothing, and at the end prints the exact installer command to use.</dd>
+<dt>-c</dt><dd>Your server <b>c</b>ertificate.</dd>
+<dt>-k</dt><dd>Its private <b>k</b>ey.</dd>
+<dt>-b</dt><dd>The CA <b>b</b>undle (the chain file).</dd>
+</dl>
+<div class="expect"><b>You should see:</b> "Validation succeeded," followed by a ready-made <code>satellite-installer</code> command. Run the command it prints. It will look like this:</div>
+<pre><span class="lbl">bash — example; use the one katello-certs-check prints</span>satellite-installer --scenario satellite \
+  --certs-server-cert /root/satellite_cert/satellite.crt \
+  --certs-server-key /root/satellite_cert/satellite.key \
+  --certs-server-ca-cert /root/satellite_cert/dod-chain.pem \
+  --certs-update-server --certs-update-server-ca</pre>
+<dl class="flags">
+<dt>--scenario satellite</dt><dd>Same setup as before, just updating it.</dd>
+<dt>--certs-server-cert</dt><dd>The DoD certificate for the web page.</dd>
+<dt>--certs-server-key</dt><dd>Its private key.</dd>
+<dt>--certs-server-ca-cert</dt><dd>The DoD chain that signed it.</dd>
+<dt>--certs-update-server</dt><dd>"Replace the current web certificate with this one."</dd>
+<dt>--certs-update-server-ca</dt><dd>"Also update the CA that clients are told to trust," so registered clients trust the new certificate.</dd>
+</dl>
+<div class="box warn"><b class="h">📣 Clients need the new CA too</b><p>Servers already registered to Satellite trusted the <i>old</i> self-made certificate. After this change, update them. The simplest way is to re-run the registration command from Satellite (Hosts → Register Host) or reinstall the <code>katello-ca-consumer</code> package from <code>https://FQDN/pub/</code>. Do this in a planned maintenance window, because clients can't check in until they trust the new chain.</p></div>
+
+
+<div class="check"><b class="h">✔ Checkpoint 6</b>
+<ol class="do">
+<li><span class="t"><code>ss</code> shows 9091 listening and nothing on 9090.</span></li>
+<li><span class="t">Cockpit loads at <code>https://FQDN:9091</code>, you can log in, and Cockpit's Terminal shows the right name for <code>hostname -f</code>.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 7 -->
+<section class="step" id="s7" data-title="7 · Satellite Packages">
+<span class="tag">Step 7</span>
+<h2>Install Satellite's Software From Its DVD</h2>
+<p class="story">Satellite comes on its own DVD. You "insert" it as a <b>second</b> DVD drive, connect it, and run Red Hat's script, which installs Satellite and pulls any extra pieces it needs from the RHEL shelf you built in Step 5.</p>
+
+<ol class="do">
+<li><span class="t">vSphere → Edit Settings → <b>Add New Device</b> → CD/DVD Drive → Datastore ISO File → <code>Satellite-6.19.1-rhel-9-x86_64.dvd.iso</code>. Check <b>Connected</b> and <b>Connect At Power On</b> → OK.</span></li>
+</ol>
+<pre><span class="lbl">bash</span>lsblk -o NAME,SIZE,TYPE,LABEL,MOUNTPOINTS</pre>
+<dl class="flags">
+<dt>lsblk</dt><dd>List disks and drives.</dd>
+<dt>-o NAME,SIZE,TYPE,LABEL,MOUNTPOINTS</dt><dd>Only these columns. <code>TYPE rom</code> means a DVD drive. <code>LABEL</code> tells the two discs apart.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> two <code>rom</code> drives. The one <b>not</b> connected to <code>/media/rhel</code>, with a Satellite label, is the new one, usually <code>sr1</code>.</div>
+<pre><span class="lbl">bash</span>mkdir -p /media/sat6
+mount -o ro /dev/sr1 /media/sat6
+findmnt -t iso9660
+ls /media/sat6</pre>
+<dl class="flags">
+<dt>mkdir -p /media/sat6</dt><dd>Make a folder for the Satellite DVD.</dd>
+<dt>mount</dt><dd>Connect a disk to a folder.</dd>
+<dt>-o ro</dt><dd>Options: read-only. No fstab line this time, because you only need this DVD during install.</dd>
+<dt>/dev/sr1 /media/sat6</dt><dd>"Connect drive sr1 to this folder." Swap in <code>sr0</code> if lsblk showed that.</dd>
+<dt>findmnt -t iso9660</dt><dd>List every connected DVD (<code>-t</code> filters by type).</dd>
+<dt>ls</dt><dd>List what's on the DVD.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> both <code>/media/rhel</code> and <code>/media/sat6</code>, and an <code>install_packages</code> file on the Satellite DVD.</div>
+
+<pre><span class="lbl">bash</span>dnf upgrade -y
+cd /media/sat6
+./install_packages</pre>
+<dl class="flags">
+<dt>dnf upgrade -y</dt><dd>Bring every installed package up to the newest version on your shelves. <code>-y</code> means auto-yes. It usually finds nothing, since you installed from the same DVD.</dd>
+<dt>cd /media/sat6</dt><dd>"Change directory": go into the Satellite DVD folder. The script expects to run from there.</dd>
+<dt>./install_packages</dt><dd><code>./</code> means "the file right here in this folder." Linux doesn't run programs from the current folder unless you say so, for safety. The script creates a temporary shelf from the DVD and installs Satellite.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> it ends with <code>Install is complete. Please run satellite-installer --scenario satellite</code>.</div>
+<div class="box ift"><b class="h">🔧 If this happens</b>
+<ul>
+<li><b>"No match" or a missing dependency</b> → check both DVDs are connected (<code>findmnt -t iso9660</code>) and both RHEL shelves are listed (<code>dnf repolist</code>).</li>
+<li><b>One specific package is truly missing</b> → bring that exact RPM over through the approved transfer process, then run the script again.</li>
+</ul></div>
+
+<div class="check"><b class="h">✔ Checkpoint 7</b>
+<ol class="do"><li><span class="t">The script finished with "Install is complete."</span></li></ol></div>
+</section>
+
+<!-- STEP 8 -->
+<section class="step" id="s8" data-title="8 · Configure Satellite">
+<span class="tag">Step 8</span>
+<h2>Set Up Satellite and Open It to Client Servers</h2>
+<p class="story">The software is installed but not set up yet. Now you run <code>satellite-installer</code>, which creates the database, the web interface, the ID cards, and all the services. Before that, do one last check that everything it depends on is right.</p>
+
+<h3>8a. Pre-flight check (everything must pass)</h3>
+<pre><span class="lbl">bash</span>hostname -f
+getent hosts $(hostname -f)
+getent hosts <span class="v" data-v="IP"></span>
+chronyc tracking | grep -E 'Reference|System time'
+df -h /var/lib/pgsql /var/lib/pulp /tmp
+findmnt -o OPTIONS /tmp
+ss -tlnp | grep -E ':9090\b'</pre>
+<dl class="flags">
+<dt>hostname -f</dt><dd>The server's full name.</dd>
+<dt>$( … )</dt><dd>"Run the command inside first and put its answer here." So this looks up whatever <code>hostname -f</code> printed.</dd>
+<dt>getent hosts IP</dt><dd>Reverse lookup, IP → name.</dd>
+<dt>chronyc tracking | grep -E '…|…'</dt><dd>Clock status, trimmed to the time-source line and the "how far off" line. <code>|</code> inside the quotes means "or."</dd>
+<dt>df -h</dt><dd>"Disk free": how full each room is. <code>-h</code> = <b>h</b>uman-readable sizes (G, T) instead of raw numbers.</dd>
+<dt>findmnt -o OPTIONS /tmp</dt><dd>Just the rules on <code>/tmp</code>.</dd>
+<dt>ss -tlnp | grep ':9090\b'</dt><dd>Is anything behind door 9090? It must print <b>nothing</b>.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> name and IP match both ways, the clock is synced, pgsql and pulp are separate rooms, <code>/tmp</code> has no <code>noexec</code>, and <b>nothing</b> on 9090.</div>
+
+<h3>8b. Run the Satellite installer</h3>
+<div class="box warn"><b class="h">📣 The organization name is forever</b><p>The first organization's internal label can't be changed later. Confirm the approved name before you press Enter.</p></div>
+<pre><span class="lbl">bash</span>satellite-installer --scenario satellite \
+  --foreman-initial-organization "<span class="v" data-v="ORG"></span>" \
+  --foreman-initial-location "<span class="v" data-v="LOC"></span>" \
+  --foreman-initial-admin-username <span class="v" data-v="ADMIN"></span></pre>
+<dl class="flags">
+<dt>satellite-installer</dt><dd>Red Hat's setup program for Satellite.</dd>
+<dt>--scenario satellite</dt><dd>"Build a full Satellite server" (with its own local database), not a smaller Capsule.</dd>
+<dt>--foreman-initial-organization</dt><dd>The first organization, the top-level container for everything. <b>Foreman</b> is the open-source project Satellite's web interface is built on, which is why the options start with "foreman."</dd>
+<dt>--foreman-initial-location</dt><dd>The first location (usually a site or building).</dd>
+<dt>--foreman-initial-admin-username</dt><dd>The first admin login name.</dd>
+<dt>\</dt><dd>The command continues on the next line.</dd>
+</dl>
+<div class="box why"><b class="h">💡 Why isn't there a password option?</b><p>Anything you type in a command is saved in your command history (<code>~/.bash_history</code>), where anyone with root can read it later, and STIG auditors check that file. If you leave the password out, the installer makes up a strong random one and shows it at the end. Save it in your approved password vault, then change it after your first login.</p></div>
+<div class="expect"><b>You should see:</b> after 20 to 40 minutes, a success message with the Satellite web address, the admin name, and the generated password.</div>
+<div class="box ift"><b class="h">🔧 If it fails</b>
+<ul>
+<li><b>Read the log.</b> The last error lines name the part that broke: <code>grep -n ERROR /var/log/foreman-installer/satellite.log | tail -20</code>. Here <code>grep -n</code> finds lines with ERROR and shows line numbers, and <code>tail -20</code> shows only the last 20 of them.</li>
+<li><b>After fixing the cause</b> → run the exact same command again. The installer is safe to re-run.</li>
+</ul></div>
+<pre><span class="lbl">bash — check every Satellite service is running</span>satellite-maintain service status --brief</pre>
+<dl class="flags">
+<dt>satellite-maintain</dt><dd>Satellite's maintenance tool.</dd>
+<dt>service status</dt><dd>Check every Satellite service (web server, database, content service, and others).</dd>
+<dt>--brief</dt><dd>One line per service instead of pages of detail.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> every line ending in <code>[OK]</code>.</div>
+
+<h3>8c. Put away the install DVD</h3>
+<pre><span class="lbl">bash</span>cd /
+umount /media/sat6
+findmnt -t iso9660</pre>
+<dl class="flags">
+<dt>cd /</dt><dd>Leave the DVD folder first. You can't disconnect a disk while you're "standing in" it; you'd get "target is busy."</dd>
+<dt>umount</dt><dd>"Un-mount": disconnect it. Note the spelling: <code>umount</code>, not "unmount."</dd>
+<dt>findmnt -t iso9660</dt><dd>Confirm only <code>/media/rhel</code> is left.</dd>
+</dl>
+<p>Then remove the Satellite DVD drive in vSphere.</p>
+<div class="box choice"><b class="h">🔀 Your choice: keep or remove the RHEL DVD</b>
+<ul>
+<li><b>Keep it</b> (default): future <code>dnf install</code> commands keep working from the RHEL shelf.</li>
+<li><b>Remove it</b>: then switch the shelves off, or every dnf command errors: <code>sed -i 's/^enabled=1/enabled=0/' /etc/yum.repos.d/rhel-local.repo</code>. Here <code>sed -i</code> edits the file in place, <code>s/old/new/</code> swaps text, and <code>^</code> means "at line start." Also delete or comment out (<code>#</code>) the <code>/media/rhel</code> line in fstab.</li>
+</ul></div>
+
+<h3>8d. Log in to Satellite</h3>
+<ol class="do">
+<li><span class="t">In Edge go to <code>https://<span class="v" data-v="FQDN"></span></code>. Always use the full name, never the IP.</span></li>
+<li><span class="t">A certificate warning is normal here. Satellite made its own CA during install. Continue only if the certificate shows your server's name.</span></li>
+<li><span class="t">Log in, check the organization and location, then change the admin password.</span></li>
+</ol>
+
+<h3>8e. Let approved client servers reach Satellite</h3>
+<p>Right now the firewall only lets in SSH and Cockpit. Your client servers need to reach Satellite's web ports. You'll open them <b>only</b> for the approved client network, not for everyone.</p>
+<pre><span class="lbl">bash</span>firewall-cmd --get-active-zones</pre>
+<dl class="flags">
+<dt>--get-active-zones</dt><dd>Firewall rules are grouped into <b>zones</b>. This shows which zone each network card uses.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a zone name with NIC1 listed under it. Type that zone in the <b>firewalld zone</b> field.</div>
+<pre><span class="lbl">bash</span>firewall-cmd --permanent --zone=<span class="v" data-v="ZONE"></span> --add-rich-rule='rule family="ipv4" source address="<span class="v" data-v="CLIENTCIDR"></span>" service name="https" accept'
+firewall-cmd --permanent --zone=<span class="v" data-v="ZONE"></span> --add-rich-rule='rule family="ipv4" source address="<span class="v" data-v="CLIENTCIDR"></span>" service name="http" accept'
+firewall-cmd --reload
+firewall-cmd --zone=<span class="v" data-v="ZONE"></span> --list-all</pre>
+<dl class="flags">
+<dt>--permanent</dt><dd>Save it so it survives reboots.</dd>
+<dt>--zone=</dt><dd>Which zone to change.</dd>
+<dt>--add-rich-rule='…'</dt><dd>A "rich rule" is a rule with conditions. The single quotes keep the whole rule together as one piece.</dd>
+<dt>rule family="ipv4"</dt><dd>This rule is about IPv4 traffic.</dd>
+<dt>source address="CIDR"</dt><dd>"Only from this network." A CIDR like <code>10.10.220.0/24</code> means a whole range of addresses.</dd>
+<dt>service name="https"</dt><dd>Port 443, the secure web port clients use to register and download.</dd>
+<dt>service name="http"</dt><dd>Port 80, also used for downloads and one registration step.</dd>
+<dt>accept</dt><dd>Let matching traffic in.</dd>
+<dt>--reload</dt><dd>Apply the saved rules now.</dd>
+<dt>--list-all</dt><dd>Show everything configured in that zone.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> two rich rules for your client network. Also make sure the output does <b>not</b> show <code>target: ACCEPT</code> or plain <code>http</code>/<code>https</code> under services. Either of those would let <i>everyone</i> in and undo your restriction.</div>
+<div class="box rule"><b class="h">🔒 Always true for ports on this server</b>
+<ul>
+<li>Client servers → Satellite: <b>443 and 80 only</b>, and only from approved networks.</li>
+<li>Admins only: <b>22</b> (SSH) and <b>9091</b> (Cockpit).</li>
+<li>Every other port stays closed until the matching feature is approved and turned on.</li>
+</ul></div>
+<pre><span class="lbl">bash — from a client server inside the approved network</span>getent hosts <span class="v" data-v="FQDN"></span>
+curl -I --connect-timeout 10 http://<span class="v" data-v="FQDN"></span>/
+curl -I --connect-timeout 10 https://<span class="v" data-v="FQDN"></span>/</pre>
+<dl class="flags">
+<dt>getent hosts</dt><dd>Can the client find Satellite's address?</dd>
+<dt>curl -I</dt><dd>Fetch just the page header.</dd>
+<dt>--connect-timeout 10</dt><dd>Give up after 10 seconds instead of waiting forever.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> the right IP, then a header for both. A <b>timeout</b> means a firewall or network path problem. A <b>certificate error</b> means the client doesn't trust Satellite's CA yet (normal until the client is registered).</div>
+
+<div class="check"><b class="h">✔ Checkpoint 8</b>
+<ol class="do">
+<li><span class="t">All services [OK], and the dashboard loads by full name.</span></li>
+<li><span class="t">A client in the approved network gets a response on 80 and 443.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 9 -->
+<section class="step" id="s9" data-title="9 · Offline Custom RPMs">
+<span class="tag">Step 9</span>
+<h2>Lock Satellite Offline and Load Your Own Packages</h2>
+<p class="story">Two last jobs. First, tell Satellite it will <b>never</b> talk to Red Hat online, so it stops trying. Second, load a set of approved packages (RPMs) into Satellite so client servers can install them.</p>
+
+<h3>9a. Switch Satellite to offline mode</h3>
+<ol class="do">
+<li><span class="t">Content → Subscriptions → <b>Manage Manifest</b> → <b>CDN Configuration</b> tab → choose <b>Export Sync</b> → Update. (This means "content arrives by exported files, not by download.")</span></li>
+<li><span class="t">Administer → Settings → <b>Content</b> tab → <b>Subscription Connection Enabled</b> = <b>No</b>. Reload the page and confirm it saved.</span></li>
+</ol>
+
+<h3>9b. Make a drop-off folder on the big disk</h3>
+<div class="box why"><b class="h">💡 Why not your home folder?</b><p><code>/home</code> is small on purpose (10 GiB) and has <code>noexec</code>. A real batch of packages can fill it quickly. <code>/var</code> lives on the 2 TB data disk, so the drop-off folder goes there.</p></div>
+<pre><span class="lbl">bash</span>mkdir -p /var/local/rpm-staging
+chown <span class="v" data-v="STAGEUSER"></span>:<span class="v" data-v="STAGEUSER"></span> /var/local/rpm-staging
+chmod 750 /var/local/rpm-staging
+ls -ld /var/local/rpm-staging</pre>
+<dl class="flags">
+<dt>mkdir -p</dt><dd>Create the folder (no error if it exists).</dd>
+<dt>chown user:group</dt><dd>"Change owner": make your admin user the owner, so it can upload files there.</dd>
+<dt>chmod 750</dt><dd>"Change mode" (permissions). Each digit is one audience: <b>7</b> = owner can read, write, and open; <b>5</b> = the group can read and open; <b>0</b> = everyone else gets nothing.</dd>
+<dt>ls -ld</dt><dd>List with details (<code>-l</code>), showing the folder <b>itself</b> (<code>-d</code>) rather than what's inside it.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>drwxr-x--- … <span class="v" data-v="STAGEUSER"></span> <span class="v" data-v="STAGEUSER"></span> … /var/local/rpm-staging</code>. The letters are the 750 permissions written out: <code>d</code> = directory, <code>rwx</code> = owner, <code>r-x</code> = group, <code>---</code> = everyone else.</div>
+
+<h3>9c. Copy the packages over with WinSCP</h3>
+<p><b>WinSCP</b> is a Windows program for copying files to Linux over SSH (the encrypted remote-login protocol).</p>
+<ol class="do">
+<li><span class="t">WinSCP → New Site → protocol <b>SFTP</b>, host <span class="v" data-v="FQDN"></span>, port 22, user <span class="v" data-v="STAGEUSER"></span> → Login.</span></li>
+<li><span class="t">WinSCP shows the server's <b>fingerprint</b>, a short code unique to this server. Accept it <b>only</b> if it matches the one from the server itself: run <code>ssh-keygen -lf /etc/ssh/ssh_host_ecdsa_key.pub</code>. Here <code>-l</code> means "show the fingerprint" and <code>-f</code> means "of this file." This protects you from connecting to an impostor.</span></li>
+<li><span class="t">Right panel: go to <code>/var/local/rpm-staging</code>. Left panel: the approved package share. Upload, and wait until the queue is empty.</span></li>
+</ol>
+<pre><span class="lbl">bash</span>find /var/local/rpm-staging -type f -name '*.rpm' | sort
+rpm -K /var/local/rpm-staging/*.rpm</pre>
+<dl class="flags">
+<dt>find FOLDER</dt><dd>Search this folder and every folder inside it.</dd>
+<dt>-type f</dt><dd>Only regular <b>f</b>iles (not folders).</dd>
+<dt>-name '*.rpm'</dt><dd>Only names ending in <code>.rpm</code>. The quotes stop the shell from expanding <code>*</code> too early.</dd>
+<dt>| sort</dt><dd>Put the list in alphabetical order, so it's easy to compare with the source.</dd>
+<dt>rpm -K</dt><dd>Check each package's tamper seal (digest and signature). <code>OK</code> is good. <code>NOT OK</code> means damaged in transit or unsigned. Unsigned may be fine for in-house packages if approved.</dd>
+</dl>
+
+<h3>9d. Create a product and repository in Satellite</h3>
+<p>In Satellite, a <b>product</b> is a labeled box, and a <b>repository</b> is a shelf inside it that holds packages.</p>
+<ol class="do">
+<li><span class="t">Content → Products → <b>Create Product</b> → Name <code>Offline Custom Packages</code> → Save.</span></li>
+<li><span class="t">Repositories tab → <b>New Repository</b> → Name <code>Approved RPMs</code>, Type <b>yum</b>, leave <b>Upstream URL empty</b> (there's no internet source), HTTP Proxy Policy <b>No HTTP Proxy</b> → Save.</span></li>
+</ol>
+<pre><span class="lbl">bash</span>hammer repository list --organization "<span class="v" data-v="ORG"></span>" --product "Offline Custom Packages"</pre>
+<dl class="flags">
+<dt>hammer</dt><dd>Satellite's command-line tool, which does what the web page does, from the terminal. The installer already saved root's login for it.</dd>
+<dt>repository list</dt><dd>"List repositories."</dd>
+<dt>--organization "…"</dt><dd>Only in this organization. Quotes keep names with spaces together.</dd>
+<dt>--product "…"</dt><dd>Only in this product.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a table row for <code>Approved RPMs</code>. Type its <b>ID</b> number into the <b>Custom repo ID</b> field.</div>
+<pre><span class="lbl">bash</span>hammer repository upload-content --id <span class="v" data-v="REPOID"></span> --path /var/local/rpm-staging
+hammer repository info --id <span class="v" data-v="REPOID"></span> | grep -A3 -i 'content counts'</pre>
+<dl class="flags">
+<dt>upload-content</dt><dd>"Put packages onto this shelf." Satellite builds the shelf's index for you.</dd>
+<dt>--id</dt><dd>Which repository (the number from the last step).</dd>
+<dt>--path</dt><dd>Where the packages are. A folder uploads everything in it.</dd>
+<dt>repository info</dt><dd>Show the repository's details.</dd>
+<dt>grep -A3 -i 'content counts'</dt><dd>Find the "Content Counts" section. <code>-i</code> ignores upper/lower case; <code>-A3</code> also shows the 3 lines <b>A</b>fter it.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a <code>Packages:</code> number equal to how many RPMs you uploaded. In the web page, Products → Approved RPMs → Packages lists them by name.</div>
+
+<div class="check"><b class="h">✔ Checkpoint 9</b>
+<ol class="do">
+<li><span class="t">Export Sync selected and Subscription Connection = No.</span></li>
+<li><span class="t">Package count matches what you uploaded, and there's no upstream URL.</span></li>
+</ol></div>
+</section>
+
+<!-- STEP 10 -->
+<section class="step" id="s10" data-title="★ · Secret Mission + Cleanup">
+<span class="tag">Bonus</span>
+<h2>Secret Mission and Cleanup</h2>
+<h3>Secret mission: move a file using only your browser</h3>
+<ol class="do">
+<li><span class="t">In Cockpit (:9091) open <b>File browser</b> → go to <code>/var/tmp</code> → upload an approved, <b>non-sensitive</b> test file.</span></li>
+<li><span class="t">In Cockpit's Terminal run <code>ls -l /var/tmp/&lt;file&gt;</code> (list with details) and <code>stat -c '%n %s bytes' /var/tmp/&lt;file&gt;</code>. <code>stat</code> shows file facts; <code>-c</code> sets a custom format, where <code>%n</code> is the name and <code>%s</code> the size.</span></li>
+<li><span class="t">Take a screenshot, then delete the file.</span></li>
+</ol>
+<h3>Cleanup</h3>
+<div class="tablewrap"><table>
+<tr><th>If you want to…</th><th>Do this</th></tr>
+<tr><td>Keep it running</td><td>Keep Export Sync on. Empty <code>/var/local/rpm-staging</code> per your retention policy. Check <code>df -h /var/lib/pulp</code> now and then, because the library grows.</td></tr>
+<tr><td>Pause it</td><td>On the console run <code>satellite-maintain service stop</code> (stops every Satellite service cleanly), then shut the VM down from vSphere.</td></tr>
+<tr><td>Delete it</td><td>Delete the VM from disk in vSphere, remove its A and PTR records from DNS, and remove any lab-only CA from Windows certificate stores.</td></tr>
+</table></div>
+</section>
+  </main></div>
+  <div id="trouble" class="hidden"><main>
+<div class="pagehead"><div class="eyebrow">When something doesn't go to plan</div><h1>Troubleshooting <em>&amp;</em> Fixes</h1><p>Problems met during real builds, with what you see, why it happens, the fix, and how to confirm it worked. Search by error text or command.</p></div>
+
+<input class="search" id="tsearch" type="search" placeholder="Search symptoms, commands, error text…">
+
+<div class="box rule"><b class="h">🔒 The golden rule: ask before you change</b>
+<p>Never guess. Let the server tell you what's wrong first, using commands that only <i>look</i> and never change anything. Always check from the <b>inside out</b>: the service → SELinux → firewall → network → your computer. Stop at the first thing that fails. That's your problem.</p>
+<ul>
+<li><code>journalctl -u &lt;service&gt; -b --no-pager | tail -50</code>: a service's log. <code>-u</code> = which service ("unit"), <code>-b</code> = only since the last boot, <code>--no-pager</code> = print it all at once instead of one screen at a time, <code>tail -50</code> = only the last 50 lines.</li>
+<li><code>tail -f /var/log/secure</code>: watch login attempts live. <code>-f</code> = "follow," keep showing new lines as they happen. Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop.</li>
+<li><code>ausearch -m AVC -ts recent</code>: what SELinux blocked. <code>-m AVC</code> = the "access denied" message type, <code>-ts recent</code> = from the last 10 minutes.</li>
+<li><code>df -h</code> and <code>vgs</code>: how full each room is (<code>-h</code> = readable sizes) vs. how much unused space is left in each disk pool.</li>
+<li><code>klist -kte /etc/krb5.keytab</code>: (only if joined to Active Directory) the exact Kerberos identities this server holds. <code>-k</code> = read the keytab file, <code>-t</code> = show dates, <code>-e</code> = show encryption types.</li>
+</ul></div>
+
+<article class="ts" id="t-faillock" data-title="Password rejected / account locked">
+<h3>The password is right, but login keeps failing</h3>
+<div class="meta">Step 3 onward · logins · faillock · STIG</div>
+<dl>
+<dt>What you see</dt><dd>"Authentication failed" even with the right password. Resetting the password as root <b>doesn't help</b>.</dd>
+<dt>Why</dt><dd>STIG turns on <code>pam_faillock</code>, a lockout counter. After 3 bad tries it locks the account, and it usually never unlocks by itself. The counter is stored <b>separately</b> from the password, so changing the password doesn't reset it. The login prompt still appears on purpose, so an attacker can't tell the account is locked.</dd>
+<dt>Fix</dt><dd>From a root session (the vSphere console):
+<pre><span class="lbl">bash</span>faillock --user <span class="v" data-v="STAGEUSER"></span>
+faillock --user <span class="v" data-v="STAGEUSER"></span> --reset
+grep -E '^(deny|unlock_time|dir|even_deny_root)' /etc/security/faillock.conf</pre>
+<dl class="flags">
+<dt>faillock</dt><dd>The tool that reads and clears the lockout counter.</dd>
+<dt>--user NAME</dt><dd>Show that user's failed attempts.</dd>
+<dt>--reset</dt><dd>Clear the counter, which unlocks the account.</dd>
+<dt>grep -E '^(…)'</dt><dd>Show the lockout settings: how many tries (<code>deny</code>), the auto-unlock time (<code>unlock_time</code>, where <code>0</code> = never), where the counter is stored (<code>dir</code>), and whether root can be locked too (<code>even_deny_root</code>).</dd>
+</dl></dd>
+<dt>Check it</dt><dd><code>faillock --user &lt;user&gt;</code> shows no entries, and login works.</dd>
+<dt>Prevent it</dt><dd>Test symbols in the console before using them in a password. See <a href="#" data-goto="t-keyboard">console mistypes characters</a>.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-rootlock" data-title="Root is locked too">
+<h3>Root is locked out too</h3>
+<div class="meta">logins · emergency recovery</div>
+<dl>
+<dt>What you see</dt><dd>Even root can't log in on the console after bad attempts.</dd>
+<dt>Why</dt><dd>STIG often sets <code>even_deny_root</code>, which means root gets locked too.</dd>
+<dt>Fix</dt><dd>You'll use the boot menu to get in before the lock is checked:
+<ol>
+<li>Reboot. At the boot menu press <kbd>e</kbd> (edit). STIG protects this with a boot-menu (GRUB) password, so have it ready.</li>
+<li>On the <code>linux</code> line, add <code>rd.break</code> at the end, then press <kbd>Ctrl</kbd>+<kbd>X</kbd>. <code>rd.break</code> means "stop early in startup and give me an emergency root shell."</li>
+<li><code>mount -o remount,rw /sysroot</code>: the real system is connected at <code>/sysroot</code> but read-only. <code>remount,rw</code> makes it writable.</li>
+<li><code>chroot /sysroot</code>: "change root," step inside the real system so your commands affect it.</li>
+<li><code>faillock --user root --reset</code>: clear root's counter.</li>
+<li><code>touch /.autorelabel</code>: <code>touch</code> creates an empty file. This one tells SELinux to re-check every file's label on the next boot, because you changed things while SELinux wasn't watching.</li>
+<li><code>exit</code>, then <code>reboot</code>. The relabel takes a few minutes.</li>
+</ol></dd>
+<dt>Check it</dt><dd>Root can log in on the console after the reboot.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-keyboard" data-title="Console mistypes characters">
+<h3>The vSphere console types the wrong characters</h3>
+<div class="meta">Step 3 · console · keyboard</div>
+<dl>
+<dt>What you see</dt><dd>A password with symbols fails in the console but works over SSH or Cockpit. Symbols come out wrong when you type visible commands.</dd>
+<dt>Why</dt><dd>The console sends <i>which key</i> you pressed (a "scan code"), not <i>which character</i> you meant. If your computer's keyboard layout doesn't match what the VM expects, symbols like <code>@ # $ | \</code> turn into different characters. This happens from Windows and Mac alike. Passwords are hidden, so you never see it.</dd>
+<dt>Fix</dt><dd>Test the symbols (<b>not</b> your password) at a normal prompt:
+<pre><span class="lbl">bash</span>echo '@#$\|-.'</pre>
+<dl class="flags">
+<dt>echo</dt><dd>"Print back exactly what I typed."</dd>
+<dt>' '</dt><dd>Single quotes stop the shell from treating the symbols as special, so you see exactly what the console sent.</dd>
+</dl>
+Use only symbols that came out right. STIG still requires 15+ characters with upper, lower, number, and symbol, so "lowercase and numbers only" won't be accepted. A long passphrase with <code>-</code> or <code>.</code> is a safe choice. If the account is already locked, reset the password (<code>passwd &lt;user&gt;</code>) <b>and</b> clear faillock (above).</dd>
+<dt>Don't</dt><dd>Don't type your real password on a visible command line to "see" it. It stays on the screen and in <code>~/.bash_history</code>, the saved command history that auditors check.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-sudo" data-title="sudo: Permission denied on write">
+<h3>"Permission denied" when writing a file, even with sudo</h3>
+<div class="meta">shell · sudo · the redirection trap</div>
+<dl>
+<dt>What you see</dt><dd><code>sudo echo "x" &gt; /etc/file</code> or <code>sudo cat &gt; /etc/file</code> says "Permission denied."</dd>
+<dt>Why</dt><dd>Think of it as two workers. <code>sudo echo</code> runs as the admin, but the <code>&gt;</code> (put it into a file) is done by <b>your</b> normal shell, <b>before</b> sudo even starts. Your normal user isn't allowed to write in <code>/etc</code>, so the file part fails.</dd>
+<dt>Fix</dt><dd>Option 1 (this guide's rule): become root first with <code>sudo -i</code>, then there's only one worker and it's the admin.<br>
+Option 2: hand the text to a command that runs <i>as</i> admin and writes the file itself:
+<pre><span class="lbl">bash</span>printf '[Socket]\nListenStream=\nListenStream=9091\n' | sudo tee /etc/systemd/system/cockpit.socket.d/listen.conf</pre>
+<dl class="flags">
+<dt>printf '…'</dt><dd>Print text. <code>\n</code> means "new line," so this makes three lines.</dd>
+<dt>|</dt><dd>Hand that text to the next command.</dd>
+<dt>sudo tee FILE</dt><dd><code>tee</code> writes what it receives into a file (and also shows it on screen). Because <code>tee</code> itself runs under sudo, it has permission. Add <code>-a</code> to <b>add</b> to the file instead of replacing it.</dd>
+</dl></dd>
+</dl>
+</article>
+
+<article class="ts" id="t-port" data-title="Port changed but browser shows nothing">
+<h3>The port moved and the service is "listening," but the browser won't load</h3>
+<div class="meta">Step 6 · ports · SELinux · firewall · the ladder</div>
+<dl>
+<dt>What you see</dt><dd><code>systemctl show cockpit.socket -p Listen</code> says 9091, but Edge shows a blank page or "can't reach this page."</dd>
+<dt>Fix</dt><dd>Climb this ladder <b>in order</b> and stop at the first rung that fails:
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Check</th><th>Where</th><th>If it fails</th></tr>
+<tr><td>1</td><td><code>ss -tlnp | grep 9091</code><br>(TCP, listening, numbers, program)</td><td>Server</td><td>The service isn't behind the door. Check the drop-in file (is the blank <code>ListenStream=</code> line there?), then <code>systemctl daemon-reload</code> and restart the socket.</td></tr>
+<tr><td>2</td><td><code>semanage port -l | grep -w 9091</code></td><td>Server</td><td>SELinux hasn't allowed it. Add <code>websm_port_t</code> (Step 6b). See what was blocked with <code>ausearch -m AVC -ts recent</code>.</td></tr>
+<tr><td>3</td><td><code>firewall-cmd --info-service=cockpit</code> and <code>firewall-cmd --list-all</code></td><td>Server</td><td>The fence is closed. Add 9091, then <code>--reload</code>. The usual slip: <code>--permanent</code> without a reload, or a reload without <code>--permanent</code>.</td></tr>
+<tr><td>4</td><td><code>curl -skI https://localhost:9091</code></td><td>Server</td><td>Cockpit itself is failing. Read <code>journalctl -u cockpit -b</code> and check the certificate files.</td></tr>
+<tr><td>5</td><td><code>Test-NetConnection &lt;FQDN&gt; -Port 9091</code></td><td>Jump server</td><td>If the name doesn't resolve, it's DNS: check the records and run <code>Clear-DnsClientCache</code>. If the name resolves but TCP fails, a network firewall or route between them is blocking.</td></tr>
+<tr><td>6</td><td>Edge at <code>https://FQDN:9091</code></td><td>Jump server</td><td>Hard refresh (<kbd>Ctrl</kbd>+<kbd>F5</kbd>) or open an InPrivate window. Use the <b>exact</b> name on the certificate. If the IP works but the name doesn't, it's DNS or the certificate name.</td></tr>
+</table></div></dd>
+<dt>Also check</dt><dd>That you typed <code>https://</code>. Cockpit won't answer plain <code>http://</code>.</dd>
+<dt>Choice</dt><dd>Your original notes opened the port with <code>firewall-cmd --permanent --add-port=9091/tcp</code>. That works too: <code>--add-port</code> opens a raw numbered door. This guide instead changes the <b>cockpit service definition</b>, so the firewall list still says "cockpit" and a reviewer can see <i>why</i> the door is open. Use one method, not both. With both, removing one still leaves the door open.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-jump" data-title="Jump server rebooted / DNS changed">
+<h3>Everything broke after the jump server rebooted or DNS changed</h3>
+<div class="meta">jump server · DNS · sessions</div>
+<dl>
+<dt>What you see</dt><dd>Sessions freeze, pages hang, or a name goes to an old address.</dd>
+<dt>Why</dt><dd>Your open sessions died with the reboot. Also, your computer <b>remembers</b> DNS answers for a while (a cache), so it may still use an old address. It's the DNS answers that are cached, not the jump box's network routes.</dd>
+<dt>Fix</dt><dd>Close every old tab and console window. Then clear the memory and look the name up fresh.
+<pre><span class="lbl">Windows — PowerShell as Administrator</span>Clear-DnsClientCache
+Resolve-DnsName <span class="v" data-v="FQDN"></span></pre>
+<dl class="flags">
+<dt>Clear-DnsClientCache</dt><dd>Forget every remembered DNS answer.</dd>
+<dt>Resolve-DnsName</dt><dd>Ask the DNS server directly, right now, and show the answer (record type and IP).</dd>
+</dl>
+<pre><span class="lbl">Mac — Terminal</span>sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder</pre>
+<dl class="flags">
+<dt>dscacheutil -flushcache</dt><dd>Clears the Mac's lookup memory, including DNS.</dd>
+<dt>;</dt><dd>Then run the next command no matter what.</dd>
+<dt>killall -HUP mDNSResponder</dt><dd><code>killall</code> sends a signal to every program with that name. <code>-HUP</code> ("hang up") tells the Mac's DNS program to reload and forget its cache. Despite the name, it doesn't kill it.</dd>
+</dl>
+Then open fresh sessions.</dd>
+<dt>Note</dt><dd>A dropped connection doesn't scramble your password. If logins start failing after this, it's the lockout counter from retries. See <a href="#" data-goto="t-faillock">account locked</a>.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-nic" data-title="No network after Step 4">
+<h3>No network: no gateway, no DNS, or nothing on .208</h3>
+<div class="meta">Step 4 · vSphere · NetworkManager</div>
+<dl>
+<dt>What you see</dt><dd><code>nmcli connection up</code> fails, there's no <code>default</code> route, or <code>getent</code> can't find anything.</dd>
+<dt>Why</dt><dd>Usually one of three things:
+<ol>
+<li>Network adapter 1 is still <b>unplugged</b> in vSphere from Step 1.</li>
+<li>The address is missing its <code>/24</code>.</li>
+<li>Two settings profiles are fighting over one card.</li>
+</ol></dd>
+<dt>Fix</dt><dd>vSphere → Edit Settings → Network adapter 1 → check <b>Connected</b>. Then run <code>nmcli device status</code>: the <code>STATE</code> column should say <code>connected</code>. Run <code>nmcli connection show</code> to spot duplicate profiles, and delete the extra one with <code>nmcli connection delete "&lt;name&gt;"</code>.</dd>
+<dt>Check it</dt><dd><code>ip -4 route show</code> shows exactly one <code>default via</code> line.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-repo" data-title="dnf: Cannot find a valid baseurl">
+<h3>dnf fails after a reboot: "Cannot find a valid baseurl"</h3>
+<div class="meta">Step 5 · software shelves · DVD</div>
+<dl>
+<dt>What you see</dt><dd>dnf worked before the reboot. Now every dnf command fails.</dd>
+<dt>Why</dt><dd>The shelf is the DVD, and the DVD isn't connected anymore. Either it was connected by hand with no fstab line, "Connect At Power On" is unchecked in vSphere, or it was connected by <code>/dev/sr0</code> and the drive names swapped.</dd>
+<dt>Fix</dt><dd>In vSphere, check <b>Connected</b> and <b>Connect At Power On</b>. Make sure fstab has the label line from Step 5. Then:
+<pre><span class="lbl">bash</span>mount /media/rhel
+dnf clean all &amp;&amp; dnf repolist</pre>
+<dl class="flags">
+<dt>mount /media/rhel</dt><dd>Connect using the fstab line.</dd>
+<dt>dnf clean all</dt><dd>Forget old saved shelf information.</dd>
+<dt>&amp;&amp;</dt><dd>Only if that worked…</dd>
+<dt>dnf repolist</dt><dd>…show the shelves.</dd>
+</dl></dd>
+</dl>
+</article>
+
+<article class="ts" id="t-dnfhang" data-title="dnf hangs / tries unreachable repos">
+<h3>dnf hangs, trying to reach repositories that don't exist here</h3>
+<div class="meta">Step 5 · dnf · air gap</div>
+<dl>
+<dt>What you see</dt><dd><code>dnf install</code> sits on "Updating Subscription Management repositories" or waits on a web address it can't reach, then fails.</dd>
+<dt>Why</dt><dd>An old shelf file (like <code>redhat.repo</code>) still points at Red Hat's website or a company mirror. dnf checks <b>every</b> enabled shelf before it installs anything, so one unreachable shelf blocks everything.</dd>
+<dt>Quick fix (this one command only)</dt><dd>
+<pre><span class="lbl">bash</span>dnf install -y cockpit --disablerepo='*' --enablerepo='rhel-local-*'</pre>
+<dl class="flags">
+<dt>-y</dt><dd>Auto-yes.</dd>
+<dt>--disablerepo='*'</dt><dd>"Turn off <b>every</b> shelf, just for this command." The quotes stop the shell from turning <code>*</code> into a list of file names.</dd>
+<dt>--enablerepo='rhel-local-*'</dt><dd>"Then turn back on only the shelves whose names start with <code>rhel-local-</code>." Order matters: turn all off first, then the ones you want back on.</dd>
+</dl>
+Your original notes used <code>/usr/bin/yum</code> and also listed <code>cockpit-ws</code>. On RHEL 9, <code>yum</code> is just another name for <code>dnf</code>, and <code>cockpit</code> pulls in <code>cockpit-ws</code> by itself, so neither is needed.</dd>
+<dt>Permanent fix</dt><dd>Find the bad shelf and switch it off for good:
+<pre><span class="lbl">bash</span>dnf repolist --all
+grep -l '^enabled=1' /etc/yum.repos.d/*.repo
+dnf config-manager --set-disabled &lt;repo-id&gt;</pre>
+<dl class="flags">
+<dt>repolist --all</dt><dd>Show every shelf, on <b>and</b> off.</dd>
+<dt>grep -l</dt><dd>Show only the <b>names</b> of files that contain <code>enabled=1</code>, not the lines themselves.</dd>
+<dt>config-manager --set-disabled ID</dt><dd>Sets <code>enabled=0</code> for that shelf, whichever file it's in.</dd>
+</dl>
+To silence the "subscription management" message on a server that will never register, set <code>enabled=0</code> in <code>/etc/dnf/plugins/subscription-manager.conf</code>.</dd>
+<dt>Check it</dt><dd><code>dnf repolist</code> shows only <code>rhel-local-baseos</code> and <code>rhel-local-appstream</code>.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-gpg" data-title="GPG check FAILED / key not installed">
+<h3>dnf refuses a package: "GPG check FAILED" or "public key is not installed"</h3>
+<div class="meta">Step 5 · signatures</div>
+<dl>
+<dt>What you see</dt><dd>Installs from the local shelves fail right after "downloading."</dd>
+<dt>Why</dt><dd>Signature checking (<code>gpgcheck=1</code>) is on, which is correct and required by STIG, but the server doesn't have Red Hat's "seal checker" key loaded, or the <code>gpgkey=</code> path in the repo file is wrong.</dd>
+<dt>Fix</dt><dd>
+<pre><span class="lbl">bash</span>ls /etc/pki/rpm-gpg/
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+rpm -q gpg-pubkey --qf '%{NAME}-%{VERSION}-%{RELEASE}\t%{SUMMARY}\n'</pre>
+<dl class="flags">
+<dt>ls /etc/pki/rpm-gpg/</dt><dd>Confirm the key file is where the repo file says it is.</dd>
+<dt>rpm --import</dt><dd>Load the key, so packages sealed with it are trusted.</dd>
+<dt>rpm -q gpg-pubkey</dt><dd><code>-q</code> = query. Loaded keys show up as pretend "packages" named <code>gpg-pubkey</code>.</dd>
+<dt>--qf '…'</dt><dd>"Query format": print just these details. <code>\t</code> = tab, <code>\n</code> = new line.</dd>
+</dl></dd>
+<dt>Don't</dt><dd>Your original notes used <code>gpgcheck=0</code>. That hides the error by skipping the tamper-seal check entirely, which is a STIG finding. Load the key instead.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-wrongiso" data-title="Wrong ISO booted">
+<h3>The VM boots the wrong thing, or the installer says the source is missing</h3>
+<div class="meta">Step 2 · DVDs</div>
+<dl>
+<dt>Why</dt><dd>The Satellite DVD (which can't boot a computer) or the small RHEL "boot" ISO is in the drive instead of the full RHEL DVD.</dd>
+<dt>Fix</dt><dd>Power off. Set CD/DVD 1 to <code>rhel-9.8-x86_64-dvd.iso</code> with Connect At Power On checked, then power on.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-reinstall" data-title="Installer starts again after install">
+<h3>The RHEL installer starts over after the reboot</h3>
+<div class="meta">Step 3</div>
+<dl>
+<dt>Why</dt><dd>The DVD is still set to connect at power-on, so the VM boots from it again.</dd>
+<dt>Fix</dt><dd>Uncheck <b>Connect At Power On</b> in vSphere and reboot. Your installed system is fine.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-tmp" data-title="/tmp noexec breaks Satellite">
+<h3>Satellite's installer fails with permission errors in /tmp</h3>
+<div class="meta">Step 3 / 8 · STIG · room rules</div>
+<dl>
+<dt>Why</dt><dd>STIG set <code>/tmp</code> to <code>noexec</code> (no programs may run there), but Satellite needs to run helper programs from it.</dd>
+<dt>Fix</dt><dd>Remove <code>noexec</code> from the <code>/tmp</code> line only (Step 3g), run <code>systemctl daemon-reload</code>, then <code>mount -o remount,exec /tmp</code> (change the rules now, allowing programs). Write it down as an approved exception with your ISSO.</dd>
+<dt>Check it</dt><dd><code>findmnt -o OPTIONS /tmp</code> shows no <code>noexec</code>.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-9090" data-title="Satellite: port 9090 in use">
+<h3>satellite-installer fails: something already has port 9090</h3>
+<div class="meta">Step 8 · ports</div>
+<dl>
+<dt>Why</dt><dd>Cockpit is still at door 9090. Usually the blank <code>ListenStream=</code> line is missing, so Cockpit took 9091 <i>and</i> kept 9090.</dd>
+<dt>Fix</dt><dd>Run <code>ss -tlnp | grep 9090</code> to see who has it (<code>-t</code> TCP, <code>-l</code> listening, <code>-n</code> numbers, <code>-p</code> program). Fix the file in <code>/etc/systemd/system/cockpit.socket.d/</code>, then <code>systemctl daemon-reload</code>, <code>systemctl restart cockpit.socket</code>, and run the installer again.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-installer" data-title="satellite-installer failed">
+<h3>satellite-installer stopped partway</h3>
+<div class="meta">Step 8 · logs</div>
+<dl>
+<dt>Fix</dt><dd>Find the <b>first</b> real error:
+<pre><span class="lbl">bash</span>grep -n -E 'ERROR|Error:' /var/log/foreman-installer/satellite.log | head -20</pre>
+<dl class="flags">
+<dt>grep -n -E</dt><dd>Find matching lines, with line numbers (<code>-n</code>), allowing "either/or" patterns (<code>-E</code>).</dd>
+<dt>'ERROR|Error:'</dt><dd>Lines containing ERROR or Error:.</dd>
+<dt>/var/log/foreman-installer/satellite.log</dt><dd>The installer's log file.</dd>
+<dt>| head -20</dt><dd>Only the <b>first</b> 20 matches. The first error is usually the real cause, and later ones are knock-on effects.</dd>
+</dl>
+Common causes: name or DNS mismatch, clock not synced, 9090 in use, <code>/tmp</code> noexec, or a full disk. Fix the cause and run the same installer command again.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-cert" data-title="Browser certificate warning">
+<h3>Edge shows a certificate warning</h3>
+<div class="meta">Step 6 / 8 · certificates</div>
+<dl>
+<dt>Why</dt><dd>One of three things:
+<ol>
+<li>Your internal root CA isn't in the <b>Local Computer</b> trusted list.</li>
+<li>The intermediate is missing.</li>
+<li>The address you typed doesn't match the name on the card (IP instead of name, or short name instead of full).</li>
+</ol></dd>
+<dt>Fix</dt><dd>Use the exact full name. Check <code>mmc</code> → Certificates (Local Computer). On the server, check which names the card covers:
+<pre><span class="lbl">bash</span>openssl x509 -in /etc/cockpit/ws-certs.d/50-internal.cert -noout -ext subjectAltName</pre>
+<dl class="flags">
+<dt>openssl x509</dt><dd>Read a certificate.</dd>
+<dt>-in FILE</dt><dd>Which certificate file.</dd>
+<dt>-noout</dt><dd>Don't print the scrambled certificate text itself.</dd>
+<dt>-ext subjectAltName</dt><dd>Just show the names the card is valid for.</dd>
+</dl></dd>
+<dt>Note</dt><dd>A warning on Satellite's own page (port 443) right after install is normal until a custom certificate is added to Satellite.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-upload" data-title="Custom repo package count is zero">
+<h3>Uploaded packages don't show up (count is 0)</h3>
+<div class="meta">Step 9 · hammer</div>
+<dl>
+<dt>Why</dt><dd>Wrong repository ID, the repository type isn't yum, the files aren't <code>.rpm</code>, or the upload job failed.</dd>
+<dt>Fix</dt><dd>
+<pre><span class="lbl">bash</span>hammer repository list --organization "<span class="v" data-v="ORG"></span>"
+hammer task list --search 'state=stopped and result=error'</pre>
+<dl class="flags">
+<dt>repository list</dt><dd>Confirm the right ID number.</dd>
+<dt>task list</dt><dd>Satellite does big jobs in the background as "tasks." This lists them.</dd>
+<dt>--search '…'</dt><dd>Filter the list: only finished tasks that ended in an error.</dd>
+</dl></dd>
+</dl>
+</article>
+
+<article class="ts" id="t-space" data-title="Disk full">
+<h3>A room (filesystem) is full</h3>
+<div class="meta">storage · LVM</div>
+<dl>
+<dt>Fix</dt><dd><code>df -h</code> shows which room is full. <code>vgs data</code> shows how much unused space the data pool has (<code>VFree</code>). If there's space, make the room bigger while it's running:
+<pre><span class="lbl">bash</span>lvs
+lvextend -r -L +100G /dev/data/&lt;lv_name&gt;</pre>
+<dl class="flags">
+<dt>lvs</dt><dd>"Logical volumes summary": lists the rooms by name.</dd>
+<dt>lvextend</dt><dd>Make a room bigger.</dd>
+<dt>-L +100G</dt><dd>Add 100 GiB. The <code>+</code> means "add this much," not "make it this total."</dd>
+<dt>-r</dt><dd>Also resize the filesystem inside the room in the same step, so the extra space is usable right away with no restart.</dd>
+<dt>/dev/data/&lt;lv_name&gt;</dt><dd>Which room: pool <code>data</code>, room name from <code>lvs</code>.</dd>
+</dl></dd>
+<dt>Note</dt><dd>XFS rooms can grow but can <b>never shrink</b>. Grow in modest steps.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-dodcert" data-title="DoD certificate: chain or key problems">
+<h3>The DoD certificate is installed, but the browser or Satellite still complains</h3>
+<div class="meta">Step 6g · production · DoD PKI</div>
+<dl>
+<dt>What you see</dt><dd>Browser says the certificate isn't trusted, <code>katello-certs-check</code> fails, or Cockpit keeps using its old certificate.</dd>
+<dt>Why</dt><dd>Usually one of four things:
+<ol>
+<li><b>Missing intermediate.</b> The DOD SW CA wasn't added after your certificate.</li>
+<li><b>RHEL doesn't trust the DoD roots</b> yet (production step 1 skipped).</li>
+<li><b>Key mismatch.</b> The CSR was made from a different key than the one installed.</li>
+<li><b>Stale revocation list.</b> The CRL copy on the air-gapped network expired.</li>
+</ol></dd>
+<dt>Fix</dt><dd>Run the three checks from production step 3 (<code>x509 … -issuer -ext subjectAltName</code>, <code>openssl verify</code>, and the <code>diff</code> key match). For Cockpit also run <code>/usr/libexec/cockpit-certificate-ensure --check</code> to see which file it's actually using. If revocation is the issue, bring in fresh CRLs through your approved process.</dd>
+<dt>Check it</dt><dd><code>verify</code> says <code>OK</code>, <code>diff</code> prints nothing, and Edge shows the lock icon with a DoD issuer.</dd>
+</dl>
+</article>
+
+<article class="ts" id="t-kerberos" data-title="Kerberos / KDC errors (AD-joined)">
+<h3>"Kerberos authentication did not pass" or "Cannot find KDC"</h3>
+<div class="meta">Only if the server is joined to Active Directory (not part of the base build) · SSSD · Kerberos</div>
+<dl>
+<dt>Words first</dt><dd><b>Kerberos</b> is the ticket system Active Directory uses for logins: you prove who you are once and get a <b>ticket</b> (a TGT) that works for hours. The <b>KDC</b> is the ticket office (your domain controllers). A <b>keytab</b> is a file holding the server's own password, so it can get tickets without a person typing anything. <b>SSSD</b> is the RHEL program that talks to AD for logins.</dd>
+<dt>What you see</dt><dd>AD logins or single sign-on worked, then fail, often after a long break or a network or DNS change.</dd>
+<dt>Why</dt><dd>Check these in order:
+<ol>
+<li><b>Clock off by more than 5 minutes.</b> Kerberos refuses tickets from a clock that's too far off. This is the most common cause on an air-gapped server.</li>
+<li><b>Expired tickets.</b> AD tickets last 10 hours by default.</li>
+<li><b>Can't find the ticket office.</b> DNS isn't returning the domain controllers, or <code>/etc/krb5.conf</code> has the wrong realm.</li>
+</ol></dd>
+<dt>Ask first</dt><dd>
+<pre><span class="lbl">bash — on the server</span>chronyc tracking | grep 'System time'
+klist -kte /etc/krb5.keytab
+dig +short -t SRV _kerberos._tcp.<span class="v" data-v="REALM"></span></pre>
+<dl class="flags">
+<dt>chronyc tracking | grep</dt><dd>How far off is the clock? It must be far under 300 seconds.</dd>
+<dt>klist -kte</dt><dd>List what's in the keytab: <code>-k</code> = keytab, <code>-t</code> = dates, <code>-e</code> = encryption types. The names it shows are the <b>exact</b> names to use below.</dd>
+<dt>dig</dt><dd>Ask DNS a question directly (it's in the <code>bind-utils</code> package).</dd>
+<dt>-t SRV</dt><dd>Ask for "service location" records, which say where a service lives.</dd>
+<dt>_kerberos._tcp.REALM</dt><dd>"Where is the Kerberos ticket office for this realm?"</dd>
+<dt>+short</dt><dd>Only print the answers. Expect one line per domain controller.</dd>
+</dl></dd>
+<dt>Fix</dt><dd>
+<pre><span class="lbl">bash — on the server</span>kinit -k '<span class="v" data-v="SHORTHOST"></span>$@<span class="v" data-v="REALM"></span>'
+klist
+sss_cache -E
+systemctl restart sssd</pre>
+<dl class="flags">
+<dt>kinit -k</dt><dd>"Get a fresh ticket using the keytab" instead of a typed password. Add <code>-t FILE</code> to use a keytab other than the default <code>/etc/krb5.keytab</code>.</dd>
+<dt>'SHORTHOST$@REALM'</dt><dd>An AD-joined server logs in as its <b>computer account</b>: short name in CAPITALS, then <code>$</code>, then <code>@</code> and the realm in CAPITALS. The single quotes stop the shell from treating <code>$</code> as a variable. Copy it exactly as <code>klist -kte</code> showed it.</dd>
+<dt>klist</dt><dd>With no options: show the tickets you now hold and when they expire.</dd>
+<dt>sss_cache -E</dt><dd>Mark <b>everything</b> SSSD remembers (users, groups, and more) as out of date, so it asks AD again.</dd>
+<dt>systemctl restart sssd</dt><dd>Restart SSSD so it reconnects fresh.</dd>
+</dl>
+Restart <code>httpd</code> (the web server) only if the web page itself uses Kerberos logins (Satellite "external authentication"). Otherwise it's unrelated.
+<pre><span class="lbl">Windows workstation — PowerShell or CMD</span>klist purge</pre>
+<dl class="flags"><dt>klist purge</dt><dd>Delete <i>your</i> saved tickets on this PC. Windows gets new ones automatically next time (or lock and unlock the screen).</dd></dl></dd>
+<dt>Check it</dt><dd><code>klist</code> shows a fresh ticket (<code>krbtgt/REALM@REALM</code>), and <code>id &lt;aduser&gt;</code> lists that user's groups.</dd>
+<dt>Corrected</dt><dd>Your original notes used a lowercase realm and a <code>host/</code> name that didn't match the server. Realm names are written in CAPITALS by convention, and the match is case-sensitive. Always copy names from <code>klist -kte</code>, not memory. The original real-looking internal hostnames were replaced with lab placeholders.</dd>
+</dl>
+</article>
+
+<div class="box choice" id="t-notes"><b class="h">🔀 What changed from the original session notes</b>
+<ul>
+<li><b>"Mac keyboard mangling":</b> broadened to any mismatched keyboard layout, including Windows.</li>
+<li><b>"Type your password where you can see it":</b> replaced with a symbols-only test.</li>
+<li><b>"Only lowercase + numbers":</b> fails STIG complexity. Use symbols you've tested instead.</li>
+<li><b><code>gpgcheck=0</code>:</b> replaced by loading the signing key (required by STIG).</li>
+<li><b>DVD connected by <code>/dev/sr0</code> with no fstab line:</b> replaced with a permanent connection by label (Step 5).</li>
+<li><b>"Jump box routing cache":</b> it's the DNS cache.</li>
+<li><b>Kerberos:</b> rebuilt with a clock check first, the computer-account name, and a CAPITALS realm. Only applies to AD-joined servers.</li>
+<li><b>Two ways to open the firewall port:</b> both documented. Pick one.</li>
+</ul></div>
+  </main></div>
+</div>
+</div>
+<script>
+(function(){
+  var DEFAULTS = {
+    FQDN:"sat01.lab.example", IP:"10.10.208.50", PREFIX:"24", GW:"10.10.208.1",
+    DNS1:"10.10.208.10", DNS2:"10.10.208.11", DOMAIN:"lab.example", NTP:"10.10.208.10",
+    NIC1:"ens192", NIC2:"ens224", IP210:"10.10.210.50/24", RHEL_LABEL:"RHEL-9-8-0-BaseOS-x86_64",
+    ORG:"Lab Org", LOC:"Lab Site", ADMIN:"admin", STAGEUSER:"gundamn",
+    ZONE:"public", CLIENTCIDR:"10.10.220.0/24", REPOID:"1", REALM:"LAB.EXAMPLE", SHORTHOST:"SAT01", DODBUNDLE:"Certificates_PKCS7_DoD.pem.p7b", DODINTERMEDIATE:"dod-sw-ca.pem", DODROOT:"dod-root-ca.pem"
+  };
+  var LABELS = {
+    FQDN:"Satellite full name (FQDN)", IP:".208 IP address", PREFIX:"Prefix length (e.g. 24)", GW:"Gateway",
+    DNS1:"DNS server 1", DNS2:"DNS server 2", DOMAIN:"DNS search domain", NTP:"Internal time (NTP) server",
+    NIC1:"NIC1 name (.208)", NIC2:"NIC2 name (.210)", IP210:".210 IP with prefix", RHEL_LABEL:"RHEL ISO label (from blkid)",
+    ORG:"Satellite organization", LOC:"Satellite location", ADMIN:"Satellite admin username", STAGEUSER:"Admin / staging user",
+    ZONE:"firewalld zone", CLIENTCIDR:"Approved client network (CIDR)", REPOID:"Custom repo ID (Step 9)",
+    REALM:"AD realm (CAPITALS, only if AD-joined)", SHORTHOST:"Short hostname (CAPITALS)", DODBUNDLE:"DoD CA bundle file (prod)", DODINTERMEDIATE:"DoD intermediate PEM (prod)", DODROOT:"DoD root PEM (prod)"
+  };
+  var store = {
+    get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},
+    set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},
+    del:function(k){try{localStorage.removeItem(k);}catch(e){}}
+  };
+  var vals = {};
+  try{ vals = JSON.parse(store.get("sat_vars")||"{}")||{}; }catch(e){ vals = {}; }
+  Object.keys(DEFAULTS).forEach(function(k){ if(!vals[k]) vals[k]=DEFAULTS[k]; });
+
+  function paint(){
+    document.querySelectorAll(".v[data-v]").forEach(function(el){ el.textContent = vals[el.dataset.v] || DEFAULTS[el.dataset.v] || el.dataset.v; });
+  }
+  var form = document.getElementById("varform");
+  Object.keys(DEFAULTS).forEach(function(k){
+    var l = document.createElement("label");
+    l.textContent = LABELS[k];
+    var i = document.createElement("input");
+    i.value = vals[k]; i.dataset.k = k; i.spellcheck = false;
+    i.addEventListener("input", function(){ vals[k] = i.value.trim(); store.set("sat_vars", JSON.stringify(vals)); paint(); });
+    l.appendChild(i); form.appendChild(l);
+  });
+  document.getElementById("resetvars").addEventListener("click", function(){
+    vals = Object.assign({}, DEFAULTS); store.del("sat_vars");
+    form.querySelectorAll("input").forEach(function(i){ i.value = vals[i.dataset.k]; }); paint();
+  });
+  paint();
+
+  document.querySelectorAll("pre").forEach(function(pre){
+    var b = document.createElement("button"); b.className="copy"; b.textContent="Copy";
+    b.addEventListener("click", function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll(".copy,.lbl").forEach(function(n){ n.remove(); });
+      var txt = clone.textContent.replace(/^\n+/,"");
+      var ok = function(){ b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy"; },1200); };
+      if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(ok, function(){ fallback(txt); ok(); }); }
+      else { fallback(txt); ok(); }
+    });
+    pre.appendChild(b);
+  });
+  function fallback(t){ var ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} ta.remove(); }
+
+  var done = {};
+  try{ done = JSON.parse(store.get("sat_done")||"{}")||{}; }catch(e){ done = {}; }
+  document.querySelectorAll("#guide section.step").forEach(function(sec){
+    sec.querySelectorAll("ol.do > li").forEach(function(li, idx){
+      var id = sec.id + "-" + idx;
+      var cb = document.createElement("input"); cb.type="checkbox"; cb.checked = !!done[id];
+      if(cb.checked) li.classList.add("done");
+      cb.addEventListener("change", function(){
+        done[id] = cb.checked; li.classList.toggle("done", cb.checked);
+        store.set("sat_done", JSON.stringify(done));
+      });
+      li.insertBefore(cb, li.firstChild);
+    });
+  });
+
+
+
+  var body=document.body;
+  var path=document.getElementById("path");
+  var steps=Array.prototype.slice.call(document.querySelectorAll("#guide section.step"));
+  steps.forEach(function(sec,i){
+    var t=sec.dataset.title.split(" · ");
+    var num=t.length>1?t[0]:String(i), label=t.length>1?t.slice(1).join(" · "):t[0];
+    var li=document.createElement("li"); li.dataset.sec=sec.id;
+    li.innerHTML='<a href="#'+sec.id+'"><span class="node">'+(num==="★"?"★":(num.length<2?"0"+num:num))+'</span><span class="txt">'+label+'<small></small></span></a>';
+    path.appendChild(li);
+  });
+  function bars(){
+    var tot=0,on=0;
+    path.querySelectorAll("li").forEach(function(li){
+      var sec=document.getElementById(li.dataset.sec);
+      var a=sec.querySelectorAll("ol.do > li input").length, c=sec.querySelectorAll("ol.do > li input:checked").length;
+      tot+=a; on+=c;
+      li.classList.toggle("done",a>0&&a===c); li.classList.toggle("partial",c>0&&c<a);
+      li.querySelector("small").textContent=a?(c+" of "+a+" done"):"";
+    });
+    document.getElementById("progtxt").textContent=on+" of "+tot+" tasks complete";
+    document.getElementById("progbar").style.width=tot?(100*on/tot)+"%":"0";
+    var st=document.getElementById("stat-tasks"); if(st) st.textContent=tot;
+  }
+  bars();
+  document.querySelectorAll("#guide ol.do > li input").forEach(function(cb){cb.addEventListener("change",bars);});
+
+  var tnav=document.getElementById("tnav");
+  document.querySelectorAll("#trouble article.ts").forEach(function(art){
+    var a=document.createElement("a"); a.href="#"+art.id; a.textContent=art.dataset.title; a.dataset.art=art.id; tnav.appendChild(a);
+  });
+
+  var crumb=document.getElementById("crumb");
+  function spy(){
+    var guideOn=!document.getElementById("guide").classList.contains("hidden");
+    var list=guideOn?steps:Array.prototype.slice.call(document.querySelectorAll("#trouble article.ts:not(.hidden)"));
+    var cur=null;
+    list.forEach(function(el){ if(el.getBoundingClientRect().top<180) cur=el; });
+    if(guideOn){
+      path.querySelectorAll("li").forEach(function(li){ li.classList.toggle("active",!!cur&&li.dataset.sec===cur.id); });
+      if(!cur){ crumb.innerHTML='Build Guide &nbsp;/&nbsp; <b>Overview</b>'; return; }
+      var t=cur.dataset.title.split(" · ");
+      crumb.innerHTML='Build Guide &nbsp;/&nbsp; <b>'+(t[0]==="★"?"Bonus":"Step "+t[0])+" · "+t.slice(1).join(" · ")+'</b>';
+    } else {
+      tnav.querySelectorAll("a").forEach(function(a){ a.classList.toggle("active",!!cur&&a.dataset.art===cur.id); });
+      crumb.innerHTML='Troubleshooting &nbsp;/&nbsp; <b>'+(cur?cur.dataset.title:'Overview')+'</b>';
+    }
+  }
+  window.addEventListener("scroll",spy,{passive:true});
+
+  function show(tab){
+    document.querySelectorAll("nav.top button[data-tab]").forEach(function(b){ b.classList.toggle("on",b.dataset.tab===tab); });
+    document.getElementById("guide").classList.toggle("hidden",tab!=="guide");
+    document.getElementById("trouble").classList.toggle("hidden",tab!=="trouble");
+    document.getElementById("pathwrap").classList.toggle("hidden",tab!=="guide");
+    document.getElementById("tnavwrap").classList.toggle("hidden",tab!=="trouble");
+    spy();
+  }
+  document.querySelectorAll("[data-tab]").forEach(function(b){ b.addEventListener("click",function(){ show(b.dataset.tab); window.scrollTo(0,0); body.classList.remove("nav-open"); }); });
+  document.querySelectorAll("[data-tab-go]").forEach(function(b){ b.addEventListener("click",function(){ show(b.dataset.tabGo); window.scrollTo(0,0); }); });
+  document.querySelectorAll("[data-goto]").forEach(function(a){
+    a.addEventListener("click",function(e){
+      e.preventDefault(); var el=document.getElementById(a.dataset.goto);
+      show(el.closest("#trouble")?"trouble":"guide"); el.scrollIntoView(); body.classList.remove("nav-open");
+    });
+  });
+  document.querySelectorAll("[data-flags]").forEach(function(b){ b.addEventListener("click",function(){ show("guide"); document.getElementById("flags101").scrollIntoView(); }); });
+  function nextStep(){
+    var li=path.querySelector("li:not(.done)"); return li?li.dataset.sec:"s0";
+  }
+  document.querySelectorAll("[data-start]").forEach(function(a){
+    a.addEventListener("click",function(e){ e.preventDefault(); show("guide"); document.getElementById(nextStep()).scrollIntoView(); body.classList.remove("nav-open"); });
+  });
+  document.getElementById("gridbtn").addEventListener("click",function(){
+    if(window.matchMedia("(max-width:900px)").matches) body.classList.toggle("nav-open"); else body.classList.toggle("collapsed");
+  });
+  document.querySelector(".sidebar").addEventListener("click",function(e){ if(e.target.closest("a")) body.classList.remove("nav-open"); });
+  document.addEventListener("click",function(e){ if(body.classList.contains("nav-open")&&!e.target.closest(".sidebar")&&!e.target.closest("#gridbtn")) body.classList.remove("nav-open"); });
+  document.getElementById("searchbtn").addEventListener("click",function(){ show("trouble"); window.scrollTo(0,0); var s=document.getElementById("tsearch"); setTimeout(function(){s.focus();},50); });
+  document.getElementById("tsearch").addEventListener("input",function(e){
+    var q=e.target.value.toLowerCase();
+    document.querySelectorAll("#trouble article.ts").forEach(function(art){
+      var hit=!q||art.textContent.toLowerCase().indexOf(q)>-1;
+      art.classList.toggle("hidden",!hit);
+      var link=tnav.querySelector('[data-art="'+art.id+'"]'); if(link) link.classList.toggle("hidden",!hit);
+    });
+    spy();
+  });
+  spy();
+})();
+</script>
+</body>
+</html>
