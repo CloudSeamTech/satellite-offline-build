@@ -8,6 +8,7 @@ A hand-held, plain-English guide to building a **Red Hat Satellite 6.19** server
 - **Build Guide** — 11 stages from an empty vSphere VM to a working Satellite, with a checklist, "what each piece means" for every command and flag, expected output, and if/then fixes.
 - **Flags 101** — when to use `-x` vs `--word`, with short and long examples for every flag used.
 - **Troubleshooting** — searchable fixes for issues met during real builds (faillock lockouts, port 9091, SELinux, firewall, DNS, GPG, Kerberos, DoD certificates, and more).
+- **Ansible 101** — write your first YAML playbooks from scratch (patching, installing an agent, banners, time sync, users), with every rule labeled ALWAYS / BEST ORDER / CHOICE, plus tmux and if/then logic.
 - **Lab vs. production certificates** — internal CA vs. an official DoD PKI certificate.
 
 ## Notes

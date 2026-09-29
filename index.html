@@ -241,6 +241,19 @@ nav.tlist a:hover{border-left-color:#b8c07e}
 .vars input:focus,.search:focus{border-color:#b8c07e}
 a{color:#b8c07e}
 
+.lab{display:inline-block;font:700 .64rem/1 var(--sans);letter-spacing:.1em;padding:4px 7px 3px;border:1px solid;vertical-align:2px;margin:0 2px;white-space:nowrap}
+.lab.al{color:#e6ecc4;background:rgba(111,143,88,.28);border-color:#8f9a5c}
+.lab.bo{color:#e9dfbf;background:rgba(201,191,152,.14);border-color:#a89a70}
+.lab.ch{color:#d8d2e6;background:rgba(154,145,176,.16);border-color:#8a82a3}
+pre .cm{color:#8f9a5c}
+.nest{margin:14px 0;font-size:.9rem}
+.nest .n{border:1px solid rgba(143,154,92,.45);border-left:3px solid #8f9a5c;padding:10px 12px 10px 14px;margin:8px 0 0 0;background:rgba(0,0,0,.18)}
+.nest .n .n{margin-left:22px}
+.nest .n>b{color:#fbf5ea;margin-right:8px}
+.nest .n>span{color:var(--ink-2)}
+.nest .n1{border-left-color:#a9b86c}.nest .n2{border-left-color:#c9bf98}.nest .n3{border-left-color:#b3a15f}.nest .n4{border-left-color:#9a91b0}.nest .n5{border-left-color:#7f9db5}
+.nest .kw{border-style:dashed;border-left-style:solid}
+
 </style>
 </head>
 <body>
@@ -250,6 +263,7 @@ a{color:#b8c07e}
   <nav class="top">
     <button data-tab="guide" class="on">Build Guide</button>
     <button data-flags>Flags 101</button>
+    <button data-tab="ansible">Ansible 101</button>
     <button data-tab="trouble">Troubleshooting</button>
   </nav>
   <button class="iconbtn" id="searchbtn" aria-label="Search troubleshooting"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg></button>
@@ -257,12 +271,16 @@ a{color:#b8c07e}
 </header>
 <div class="frame">
 <aside class="sidebar">
-  <div class="mtabs"><button data-tab="guide">Build Guide</button><button data-flags>Flags 101</button><button data-tab="trouble">Troubleshooting</button></div>
+  <div class="mtabs"><button data-tab="guide">Build Guide</button><button data-flags>Flags 101</button><button data-tab="ansible">Ansible 101</button><button data-tab="trouble">Troubleshooting</button></div>
   <div id="pathwrap">
     <p class="side-label">Progress</p>
     <div class="prog"><span id="progtxt"></span><div class="track"><i id="progbar"></i></div></div>
     <p class="side-label">Pathway</p>
     <ol class="path" id="path"></ol>
+  </div>
+  <div id="apathwrap" class="hidden">
+    <p class="side-label">Ansible Lessons</p>
+    <ol class="path" id="apath"></ol>
   </div>
   <div id="tnavwrap" class="hidden">
     <p class="side-label">Issues</p>
@@ -1606,6 +1624,783 @@ hammer repository info --id <span class="v" data-v="REPOID"></span> | grep -A3 -
 </table></div>
 </section>
   </main></div>
+  <div id="ansible" class="hidden"><main>
+<div class="pagehead"><div class="eyebrow">Automate the boring, repeatable work</div><h1>Ansible 101 <em>&amp;</em> YAML Basics</h1><p>Write your first playbooks from scratch: patch servers, install an agent, and handle everyday production jobs. Every line, indent and flag is explained, and every rule is labeled <span class="lab al">ALWAYS</span>, <span class="lab bo">BEST ORDER</span> or <span class="lab ch">CHOICE</span>.</p></div>
+
+<!-- A0 -->
+<section class="step" id="a0" data-title="A0 · What Ansible Is">
+<span class="tag">Lesson A0</span>
+<h2>What Ansible Is, in Plain English</h2>
+<p class="story">Imagine you have 50 servers and they all need the same update. Logging in to each one and typing the same commands 50 times is slow, and you'll make a mistake on number 37. <b>Ansible</b> lets you write the instructions <b>once</b>, in a file, and it logs in to every server and follows those instructions for you, the same way, every time.</p>
+
+<div class="box why"><b class="h">💡 The kitchen picture</b>
+<p>Think of a head chef running a big kitchen:</p>
+<ul>
+<li>The <b>control node</b> is the head chef: the one computer where Ansible is installed and where you type commands.</li>
+<li>The <b>managed nodes</b> are the cooks: the servers that receive instructions. They <b>don't</b> need Ansible installed. They only need SSH (remote login) and Python, which RHEL already has.</li>
+<li>The <b>inventory</b> is the staff list: every cook's name, grouped by station.</li>
+<li>A <b>playbook</b> is the recipe book: one file of instructions.</li>
+<li>A <b>play</b> is one recipe in the book: "these cooks do these steps."</li>
+<li>A <b>task</b> is one step in a recipe: "chop the onions."</li>
+<li>A <b>module</b> is the tool used for that step: the knife. Ansible ships with hundreds of tools, one for each kind of job (install packages, copy files, restart services).</li>
+</ul></div>
+
+<h3>Words to know</h3>
+<div class="tablewrap"><table class="gloss">
+<tr><th>Word</th><th>What it means</th></tr>
+<tr><td>Control node</td><td>The computer where Ansible is installed and where you run it. Only one needed.</td></tr>
+<tr><td>Managed node / host</td><td>A server Ansible works on. "Host" and "server" mean the same thing here.</td></tr>
+<tr><td>Inventory</td><td>The file listing your servers' names, sorted into groups.</td></tr>
+<tr><td>Group</td><td>A named bunch of servers, like <code>webservers</code>. Lets you say "do this to all web servers" in one word.</td></tr>
+<tr><td>Playbook</td><td>A YAML file (ends in <code>.yml</code>) holding one or more plays.</td></tr>
+<tr><td>Play</td><td>A section of a playbook: <b>which</b> servers, and <b>what</b> to do to them.</td></tr>
+<tr><td>Task</td><td>One single action, like "install this package."</td></tr>
+<tr><td>Module</td><td>The built-in tool a task uses, like <code>ansible.builtin.dnf</code> for installing packages.</td></tr>
+<tr><td>YAML</td><td>The simple text format playbooks are written in. It uses indentation (spaces) to show what belongs to what.</td></tr>
+<tr><td>Become</td><td>Ansible's word for "use sudo" (act as root).</td></tr>
+<tr><td>Variable</td><td>A named value you can reuse, like <code>agent_package: acme-agent</code>. Change it in one place and it changes everywhere.</td></tr>
+<tr><td>Handler</td><td>A task that only runs when another task "calls" it, like "restart the service, but only if the config file changed."</td></tr>
+<tr><td>Idempotent</td><td>A big word for a simple idea: <b>running it twice gives the same result as running it once</b>. See below.</td></tr>
+</table></div>
+
+<div class="box why"><b class="h">💡 Idempotent: "make sure" instead of "do it again"</b>
+<p>A light switch that says "<b>flip</b>" is not idempotent: press it twice and the light goes off again. A switch that says "<b>make sure the light is ON</b>" is idempotent: press it 10 times and the light is still just on.</p>
+<p>Ansible modules work like the second switch. <code>state: present</code> means "make sure it's installed." If it's already installed, Ansible does nothing and says <b>ok</b>. If it wasn't, Ansible installs it and says <b>changed</b>.</p>
+<p><b>Does this happen every time?</b> Yes, for Ansible's built-in modules that describe a state (<code>dnf</code>, <code>copy</code>, <code>user</code>, <code>systemd_service</code>, <code>lineinfile</code>). <b>No</b>, for <code>command</code> and <code>shell</code>. Those run their command every single time, because Ansible can't know what your command does. That's why this guide uses real modules whenever one exists.</p></div>
+
+<h3>How to read the labels in this tab</h3>
+<p>You asked for definite answers, so every rule here carries one of these labels:</p>
+<div class="tablewrap"><table>
+<tr><th>Label</th><th>Meaning</th></tr>
+<tr><td><span class="lab al">ALWAYS</span></td><td>Required. If you break it, Ansible stops with an error or does the wrong thing. No exceptions.</td></tr>
+<tr><td><span class="lab bo">BEST ORDER</span></td><td>Ansible would still work another way, but professionals always do it this one way, so every playbook reads the same. Do it this way every time.</td></tr>
+<tr><td><span class="lab ch">CHOICE</span></td><td>More than one right answer. The one this guide uses is marked. Pick it unless your team has its own standard.</td></tr>
+</table></div>
+</section>
+
+<!-- A1 -->
+<section class="step" id="a1" data-title="A1 · Set Up the Control Node">
+<span class="tag">Lesson A1</span>
+<h2>Set Up the Control Node</h2>
+<p class="story">The control node is where you'll write and run playbooks. It can be any RHEL 9 server you log in to, often an admin or "jump" server. You install Ansible here <b>only</b>. The servers you manage get nothing new.</p>
+
+<h3>A1a. Install Ansible and tmux (offline)</h3>
+<p>Both packages are on the RHEL 9 DVD shelves you set up in Step 5 of the Build Guide (<code>ansible-core</code> is in AppStream; <code>tmux</code> is in BaseOS). On a Satellite-registered server, they come from Satellite instead.</p>
+<pre><span class="lbl">bash — on the control node, as root</span>dnf install -y ansible-core tmux
+ansible --version</pre>
+<dl class="flags">
+<dt>dnf install -y</dt><dd>Install the packages. <code>-y</code> answers "yes" for you.</dd>
+<dt>ansible-core</dt><dd>Ansible itself, plus the <code>ansible.builtin</code> tools (modules).</dd>
+<dt>tmux</dt><dd>A "session keeper" (explained in A1d). The RHEL 9 STIG already requires it, so it may be installed.</dd>
+<dt>ansible --version</dt><dd>Prints the version <b>and</b> which config file Ansible is using (the <code>config file =</code> line). You'll use that line in A1c.</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 Air-gap rule <span class="lab al">ALWAYS</span></b>
+<p>On a disconnected network, only use modules whose names start with <code>ansible.builtin.</code>. They come inside <code>ansible-core</code>. Anything else (like <code>ansible.posix.firewalld</code> or <code>community.general.*</code>) is a separate download called a <b>collection</b>, and it won't exist here unless someone brings it in through the approved transfer process. Every example in this tab uses <code>ansible.builtin</code> only.</p></div>
+
+<h3>A1b. Give Ansible a key to log in with (SSH keys)</h3>
+<p>Ansible logs in to each server over SSH. Instead of typing a password 50 times, you create a <b>key pair</b>: a private key (stays on the control node, like your house key) and a public key (copied to each server, like the lock that key fits).</p>
+<pre><span class="lbl">bash — as your normal user (not root)</span>ssh-keygen -t ecdsa -b 521 -C "ansible control node"
+ssh-copy-id -i ~/.ssh/id_ecdsa.pub <span class="v" data-v="STAGEUSER"></span>@web01.lab.example</pre>
+<dl class="flags">
+<dt>ssh-keygen</dt><dd>"SSH key generate": makes a new key pair.</dd>
+<dt>-t ecdsa</dt><dd>The key <b>t</b>ype. <b>ALWAYS use <code>ecdsa</code> or <code>rsa</code> on FIPS servers.</b> The popular <code>ed25519</code> type is not FIPS-approved on RHEL 9 and will be refused.</dd>
+<dt>-b 521</dt><dd>Key size in <b>b</b>its. 521 is the strongest ECDSA size. (For RSA you'd use <code>-t rsa -b 4096</code>.)</dd>
+<dt>-C "…"</dt><dd>A <b>c</b>omment stored with the key, so you can tell later where it came from.</dd>
+<dt>passphrase prompt</dt><dd>It asks for a passphrase. <b>Set one.</b> STIG requires private keys to be protected. See the ssh-agent box below so you only type it once.</dd>
+<dt>ssh-copy-id</dt><dd>Copies your public key onto a server so it will accept your key. Run it once per server.</dd>
+<dt>-i FILE</dt><dd>Which public key (<b>i</b>dentity) to copy. It always ends in <code>.pub</code>. Never copy the file without <code>.pub</code>; that's your private key.</dd>
+<dt>user@server</dt><dd>Who to log in as, <code>@</code>, which server.</dd>
+</dl>
+<div class="box choice"><b class="h">🔀 Type the passphrase only once per session <span class="lab ch">CHOICE</span> (use this)</b>
+<pre><span class="lbl">bash</span>eval "$(ssh-agent)"
+ssh-add ~/.ssh/id_ecdsa</pre>
+<dl class="flags">
+<dt>ssh-agent</dt><dd>A small helper that holds your unlocked key in memory until you log out.</dd>
+<dt>eval "$( … )"</dt><dd><code>$( )</code> runs the command inside and captures what it prints. ssh-agent prints two settings lines; <code>eval</code> runs them so your shell knows where the helper is. The quotes keep the output together.</dd>
+<dt>ssh-add FILE</dt><dd>Unlock the key (you type the passphrase here, once) and hand it to the helper.</dd>
+</dl></div>
+
+<h3>A1c. Make a project folder (the layout is fixed)</h3>
+<p>Every Ansible project gets its own folder. Inside it, the layout below is the standard. <span class="lab bo">BEST ORDER</span></p>
+<pre><span class="lbl">folder layout</span>~/ansible/
+├── ansible.cfg        ← settings for this project (read FIRST)
+├── inventory.ini      ← your server names
+└── playbooks/
+    ├── ping.yml
+    ├── patch.yml
+    └── agent.yml</pre>
+<pre><span class="lbl">bash</span>mkdir -p ~/ansible/playbooks
+cd ~/ansible
+chmod 755 ~/ansible</pre>
+<dl class="flags">
+<dt>mkdir -p</dt><dd>Make the folder and the <code>playbooks</code> folder inside it in one go (<code>-p</code> = parents).</dd>
+<dt>~</dt><dd>Shortcut for your home folder.</dd>
+<dt>cd ~/ansible</dt><dd>Move into the project. <b>ALWAYS run Ansible from inside this folder</b>, or it won't find your <code>ansible.cfg</code>.</dd>
+<dt>chmod 755</dt><dd>Owner can do everything; others can only look. This matters: <b>Ansible ignores an <code>ansible.cfg</code> sitting in a folder that anyone can write to</b>, as a safety rule.</dd>
+</dl>
+
+<h4>Write <code>ansible.cfg</code></h4>
+<pre><span class="lbl">bash</span>cat &gt; ~/ansible/ansible.cfg &lt;&lt;'EOF'
+[defaults]
+inventory = ./inventory.ini
+remote_user = <span class="v" data-v="STAGEUSER"></span>
+host_key_checking = True
+retry_files_enabled = False
+interpreter_python = auto_silent
+
+[privilege_escalation]
+become_method = sudo
+EOF</pre>
+<dl class="flags">
+<dt>[defaults]</dt><dd>The main settings section. Square brackets start a section.</dd>
+<dt>inventory = ./inventory.ini</dt><dd>"My server list is this file." Now you never have to type <code>-i inventory.ini</code>.</dd>
+<dt>remote_user</dt><dd>Which account Ansible logs in as on every server.</dd>
+<dt>host_key_checking = True</dt><dd>Check each server's identity before logging in. <b>Keep it True.</b> Many internet tutorials turn this off; that removes protection against impostor servers and is a STIG finding.</dd>
+<dt>retry_files_enabled = False</dt><dd>Don't leave <code>.retry</code> clutter files behind after a failure.</dd>
+<dt>interpreter_python = auto_silent</dt><dd>Find Python on each server automatically, without printing a warning every time.</dd>
+<dt>[privilege_escalation]</dt><dd>Settings for becoming root.</dd>
+<dt>become_method = sudo</dt><dd>Use <code>sudo</code> to become root.</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 Which ansible.cfg wins? <span class="lab al">ALWAYS</span> this order</b>
+<p>Ansible looks in these places, <b>in this order</b>, and uses the <b>first one it finds</b>. It never mixes them.</p>
+<ol>
+<li>A file named in the <code>ANSIBLE_CONFIG</code> environment variable (if set)</li>
+<li><code>ansible.cfg</code> in the folder you're standing in</li>
+<li><code>~/.ansible.cfg</code> in your home folder</li>
+<li><code>/etc/ansible/ansible.cfg</code></li>
+</ol>
+<p>That's why you always <code>cd</code> into the project first. Check which one is in use with <code>ansible --version</code> and read the <code>config file =</code> line.</p></div>
+
+<h3>A1d. tmux: keep your work alive if the connection drops</h3>
+<p>Patching 50 servers can take an hour. If your SSH session to the control node drops halfway (VPN hiccup, jump box reboot, laptop sleeps), <b>the playbook dies with it</b>, and some servers are left half-updated. <b>tmux</b> fixes that. It runs your work inside a session that lives on the server, not in your window. If you get disconnected, the work keeps going, and you reconnect and pick up where you were.</p>
+<div class="box rule"><b class="h">🔒 The tmux rules</b>
+<ul>
+<li><span class="lab al">ALWAYS</span> <b>Start tmux BEFORE you start the playbook.</b> tmux can only protect things started inside it. You can't move an already-running playbook into tmux afterward.</li>
+<li><span class="lab al">ALWAYS</span> Start it on the <b>control node</b> (where Ansible runs), not on your own PC.</li>
+<li><span class="lab bo">BEST ORDER</span> Use tmux for every run that changes servers (patching, installs). A quick <code>ping</code> test doesn't need it.</li>
+<li><b>Does it need to be "enabled" like a service?</b> No. tmux isn't a service. You start a session when you need one, and it ends when you type <code>exit</code> inside it.</li>
+</ul></div>
+<pre><span class="lbl">bash — the full tmux routine</span>tmux new -s patch
+# ...now inside tmux: cd ~/ansible and run your playbook...
+# to step away without stopping it: press Ctrl+b, let go, then press d
+tmux ls
+tmux attach -t patch
+exit</pre>
+<dl class="flags">
+<dt>tmux new -s patch</dt><dd>Start a <b>new</b> session and name it <code>patch</code> (<code>-s</code> = session name). A green bar appears at the bottom; that means you're inside.</dd>
+<dt>Ctrl+b, then d</dt><dd>"Detach": step out and leave it running. <b>Ctrl+b</b> is tmux's "listen to me" key; press it, let go, then press <b>d</b>. Every tmux shortcut starts with Ctrl+b.</dd>
+<dt>tmux ls</dt><dd>List running sessions.</dd>
+<dt>tmux attach -t patch</dt><dd>Reconnect to the session named <code>patch</code> (<code>-t</code> = target). Use this after a disconnect too.</dd>
+<dt>exit</dt><dd>Typed <b>inside</b> tmux, this ends the session for good. Only do it once the playbook has finished.</dd>
+</dl>
+<div class="box warn"><b class="h">📣 STIG lock screen inside tmux</b><p>The STIG sets tmux to lock after 15 minutes of no typing. The screen goes blank and asks for your password. <b>Your playbook keeps running underneath.</b> Type your password to see it again.</p></div>
+
+<div class="check"><b class="h">✔ Checkpoint A1</b>
+<ol class="do">
+<li><span class="t"><code>ansible --version</code> works and shows <code>config file = /home/…/ansible/ansible.cfg</code>.</span></li>
+<li><span class="t">Your public key is copied to each server, and <code>ssh web01.lab.example</code> logs in without asking for the account password.</span></li>
+<li><span class="t">You can start, detach from, and re-attach to a tmux session.</span></li>
+</ol></div>
+</section>
+
+<!-- A2 -->
+<section class="step" id="a2" data-title="A2 · Inventory: Server Names">
+<span class="tag">Lesson A2</span>
+<h2>The Inventory: Where Server Names Go</h2>
+<p class="story">The inventory is your class roster. It lists every server by name and sorts them into groups. Playbooks never contain server names directly; they name a <b>group</b>, and the inventory says who's in it.</p>
+
+<pre><span class="lbl">bash — create inventory.ini</span>cat &gt; ~/ansible/inventory.ini &lt;&lt;'EOF'
+# Satellite is in its own group so patch playbooks never touch it
+[satellite]
+<span class="v" data-v="FQDN"></span>
+
+[rhel_servers]
+web01.lab.example
+web02.lab.example
+db01.lab.example
+
+[webservers]
+web01.lab.example
+web02.lab.example
+EOF</pre>
+<dl class="flags">
+<dt># …</dt><dd>A comment. Ansible ignores it. Use it to explain <i>why</i>.</dd>
+<dt>[satellite]</dt><dd>Square brackets = a <b>group name</b>. Every server listed under it (until the next bracket) belongs to that group.</dd>
+<dt>one name per line</dt><dd>Each line is one server. Use the full name (FQDN) that DNS knows.</dd>
+<dt>same server, two groups</dt><dd><code>web01</code> is in both <code>rhel_servers</code> and <code>webservers</code>. That's allowed and normal.</dd>
+</dl>
+
+<div class="box rule"><b class="h">🔒 Inventory rules</b>
+<ul>
+<li><span class="lab al">ALWAYS</span> Group names use only letters, numbers, and underscores. <b>No dashes, no spaces</b> (<code>rhel_servers</code>, not <code>rhel-servers</code>).</li>
+<li><span class="lab al">ALWAYS</span> Two groups exist without you writing them: <code>all</code> (every server in the file) and <code>ungrouped</code> (servers not under any bracket).</li>
+<li><span class="lab bo">BEST ORDER</span> Name groups by <b>what the servers do</b> (<code>webservers</code>, <code>dbservers</code>), not by where they are.</li>
+<li><span class="lab bo">BEST ORDER</span> Keep the Satellite server in its own group, and never include it in a general patch group. Satellite must be updated with <code>satellite-maintain</code>, not a plain <code>dnf update</code>.</li>
+<li><span class="lab ch">CHOICE</span> Inventories can also be written in YAML format. This guide uses INI (the bracket style) because it's easier to read. Both work the same.</li>
+</ul></div>
+
+<h3>A2a. Check the inventory, then say hello to every server</h3>
+<pre><span class="lbl">bash — from ~/ansible</span>ansible-inventory --graph
+ansible all -m ansible.builtin.ping</pre>
+<dl class="flags">
+<dt>ansible-inventory --graph</dt><dd>Draws your groups as a tree. It's a quick way to catch typos before anything runs.</dd>
+<dt>ansible</dt><dd>Runs <b>one</b> module right now, without a playbook. Good for quick checks.</dd>
+<dt>all</dt><dd>Which servers: the built-in group of everyone. You could put a group name here instead, like <code>webservers</code>.</dd>
+<dt>-m</dt><dd>Which <b>m</b>odule to run (long form: <code>--module-name</code>).</dd>
+<dt>ansible.builtin.ping</dt><dd>Not a network ping. It logs in over SSH, checks Python works, and replies "pong." If this works, Ansible can manage that server.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> a green block per server ending in <code>"ping": "pong"</code>. Red <code>UNREACHABLE</code> means SSH couldn't log in. See A9's error table.</div>
+</section>
+
+<!-- A3 -->
+<section class="step" id="a3" data-title="A3 · YAML Rules">
+<span class="tag">Lesson A3</span>
+<h2>YAML: The Grammar Rules</h2>
+<p class="story">Playbooks are written in YAML. YAML has very few rules, but the ones it has are strict. Almost every first-time Ansible error is a YAML spacing mistake, not an Ansible mistake.</p>
+
+<div class="box why"><b class="h">💡 Indentation is the whole language</b>
+<p>In a school outline, you indent sub-points under a main point to show they belong to it. YAML works exactly the same way: <b>how far a line is pushed in decides what it belongs to</b>. There are no brackets or braces to help. The spaces <i>are</i> the structure.</p></div>
+
+<div class="box rule"><b class="h">🔒 The YAML rules</b>
+<ol>
+<li><span class="lab al">ALWAYS</span> <b>Spaces only. Never the Tab key.</b> YAML refuses tabs, and they're invisible, which makes the error confusing.</li>
+<li><span class="lab al">ALWAYS</span> <b>Things at the same level line up exactly</b>, to the same column. One space off and it means something different, or breaks.</li>
+<li><span class="lab al">ALWAYS</span> <b><code>key: value</code> has a space after the colon.</b> <code>name:web</code> is wrong. <code>name: web</code> is right.</li>
+<li><span class="lab al">ALWAYS</span> <b><code>- </code> (dash, space) starts an item in a list.</b> Plays are a list, and tasks are a list, so each one starts with a dash.</li>
+<li><span class="lab al">ALWAYS</span> <b>Put quotes around a value that starts with a special character:</b> <code>*</code> <code>{</code> <code>[</code> <code>@</code> <code>%</code> <code>&amp;</code> <code>!</code>. Example: <code>name: "*"</code>. Without quotes, YAML thinks <code>*</code> is one of its own symbols and errors.</li>
+<li><span class="lab al">ALWAYS</span> <b>Quote numbers that must keep a leading zero</b>, like file permissions: <code>mode: "0644"</code>. Without quotes YAML treats it as a number and the leading zero is lost or misread.</li>
+<li><span class="lab bo">BEST ORDER</span> <b>Indent 2 spaces per level.</b> YAML allows any amount, as long as you're consistent. The Ansible world uses 2. Always use 2.</li>
+<li><span class="lab bo">BEST ORDER</span> <b>Start every playbook with <code>---</code></b> on the first line. It means "a YAML document starts here." Ansible works without it, but it's the standard.</li>
+<li><span class="lab bo">BEST ORDER</span> For yes/no settings, write <code>true</code> and <code>false</code> (lowercase), never <code>yes</code>/<code>no</code>. All four work today; <code>true</code>/<code>false</code> is the modern standard.</li>
+<li><b><code>#</code> starts a comment</b>. Everything after it on that line is ignored.</li>
+</ol></div>
+
+<h3>A3a. See the spaces</h3>
+<p>Below is a tiny playbook with every space shown as a dot (<code>·</code>). Each level is pushed in exactly 2 more dots than the level above it.</p>
+<pre><span class="lbl">yaml — spaces shown as dots</span>---
+-·name:·Say·hello                    <span class="cm">← level 0: the play starts with "- "</span>
+··hosts:·all                         <span class="cm">← level 1 (2 spaces): lines up with "name"</span>
+··tasks:                             <span class="cm">← level 1: tasks belong to the play</span>
+····-·name:·Print·a·message          <span class="cm">← level 2 (4 spaces): a task, starts with "- "</span>
+······ansible.builtin.debug:         <span class="cm">← level 3 (6 spaces): the module</span>
+········msg:·Hello·from·Ansible      <span class="cm">← level 4 (8 spaces): the module's setting</span></pre>
+<p>Here's the same playbook as a clean file you can copy. Save it as <code>~/ansible/playbooks/ping.yml</code>:</p>
+<pre><span class="lbl">yaml — ~/ansible/playbooks/ping.yml</span>---
+- name: Say hello
+  hosts: all
+
+  tasks:
+    - name: Print a message
+      ansible.builtin.debug:
+        msg: Hello from Ansible</pre>
+<pre><span class="lbl">bash — from ~/ansible</span>ansible-playbook playbooks/ping.yml</pre>
+<dl class="flags">
+<dt>ansible-playbook</dt><dd>Runs a playbook file (where <code>ansible</code> runs a single module).</dd>
+<dt>playbooks/ping.yml</dt><dd>The path to the playbook, starting from the folder you're in. No <code>-K</code> is needed here, because this play has no <code>become</code>.</dd>
+</dl>
+<div class="expect"><b>You should see:</b> <code>"msg": "Hello from Ansible"</code> for every server, then a PLAY RECAP (explained in A9).</div>
+<div class="box why"><b class="h">💡 Why does "hosts" line up with "name" and not with the dash?</b>
+<p>The dash is a bullet point, not part of the text. <code>name</code>, <code>hosts</code>, and <code>tasks</code> are all facts about the same play, so they line up with each other, 2 spaces in, right where the text after <code>- </code> begins. This is the rule that trips up most beginners. <span class="lab al">ALWAYS</span> true.</p></div>
+
+<h3>A3b. What a spacing mistake looks like</h3>
+<pre><span class="lbl">yaml — WRONG (the module is pushed in 1 extra space)</span>    - name: Print a message
+       ansible.builtin.debug:
+        msg: Hello</pre>
+<div class="expect"><b>What you'd see:</b> <code>ERROR! We were unable to read either as JSON nor YAML</code> or <code>mapping values are not allowed in this context</code>, with a line and column number. <b>Always go to that line and count the spaces</b> on it and the line above. The fix is almost always "line it up."</div>
+<pre><span class="lbl">bash — check any playbook's grammar without running it</span>ansible-playbook playbooks/ping.yml --syntax-check</pre>
+<dl class="flags">
+<dt>--syntax-check</dt><dd>Reads the file and reports grammar mistakes, but changes nothing and contacts no servers. <b>Run it every time you edit a playbook.</b></dd>
+</dl>
+</section>
+
+<!-- A4 -->
+<section class="step" id="a4" data-title="A4 · Playbook Anatomy & Order">
+<span class="tag">Lesson A4</span>
+<h2>Playbook Anatomy: What Goes Where, and in What Order</h2>
+<p class="story">Every playbook has the same skeleton. Once you know the skeleton, you can read any playbook, and write your own by filling in the blanks.</p>
+
+<h3>A4a. The hierarchy (what's inside what)</h3>
+<div class="nest">
+<div class="n n0"><b>Playbook</b> <span>the file, e.g. <code>patch.yml</code>. Starts with <code>---</code></span>
+  <div class="n n1"><b>Play</b> <span>starts with <code>- name:</code>. Says <b>who</b> (<code>hosts</code>) and <b>how</b> (<code>become</code>)</span>
+    <div class="n n2"><b>tasks:</b> <span>the list of steps, in order</span>
+      <div class="n n3"><b>Task</b> <span>starts with <code>- name:</code>. One step</span>
+        <div class="n n4"><b>Module</b> <span>e.g. <code>ansible.builtin.dnf:</code>. The tool</span>
+          <div class="n n5"><b>Module settings</b> <span>e.g. <code>name:</code>, <code>state:</code>. How to use the tool</span></div>
+        </div>
+        <div class="n n4 kw"><b>Task keywords</b> <span><code>when:</code> <code>register:</code> <code>notify:</code>. Line up with the <b>module</b>, not under it</span></div>
+      </div>
+    </div>
+    <div class="n n2"><b>handlers:</b> <span>tasks that only run when "notified"</span></div>
+  </div>
+</div>
+</div>
+
+<h3>A4b. The play: which lines, in which order</h3>
+<p>Here's the honest, definite answer on order. <b>Ansible reads the whole play before doing anything, so it doesn't care what order these lines are in.</b> People do, though. A fixed order means you always know where to look. This is the standard order. Use it every time. <span class="lab bo">BEST ORDER</span></p>
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Line</th><th>Required?</th><th>What it answers</th></tr>
+<tr><td>1</td><td><code>- name:</code></td><td>Optional, but <b>always write it</b></td><td>"What is this play for?" It's printed on screen when the play runs.</td></tr>
+<tr><td>2</td><td><code>hosts:</code></td><td><span class="lab al">ALWAYS</span> required</td><td>"<b>Who?</b>" A group name from the inventory (or <code>all</code>).</td></tr>
+<tr><td>3</td><td><code>become:</code></td><td>Needed for anything that changes the system</td><td>"Do I need root?" <code>true</code> = use sudo.</td></tr>
+<tr><td>4</td><td><code>serial:</code></td><td>Optional</td><td>"How many at a time?" For rolling changes.</td></tr>
+<tr><td>5</td><td><code>vars:</code></td><td>Optional</td><td>"What values will I reuse?"</td></tr>
+<tr><td>6</td><td><code>tasks:</code></td><td><span class="lab al">ALWAYS</span> required (or <code>roles:</code>)</td><td>"<b>What</b> do I do?" The steps.</td></tr>
+<tr><td>7</td><td><code>handlers:</code></td><td>Optional</td><td>"What runs only if something changed?" <b>Always last.</b></td></tr>
+</table></div>
+<div class="box why"><b class="h">💡 Why this order makes sense</b><p>It reads like a sentence: "<b>This play</b> (name) is for <b>these servers</b> (hosts), <b>as root</b> (become), <b>one at a time</b> (serial), <b>using these values</b> (vars), <b>do these steps</b> (tasks), and <b>if needed, clean up with these</b> (handlers)." Who and how come before what.</p></div>
+
+<h3>A4c. The task: which lines, in which order</h3>
+<div class="box rule"><b class="h">🔒 Task rules</b>
+<ul>
+<li><span class="lab al">ALWAYS</span> Each task starts with <code>- </code> (it's an item in the <code>tasks</code> list).</li>
+<li><span class="lab al">ALWAYS</span> <b>One module per task.</b> Never two. If you need two actions, write two tasks.</li>
+<li><span class="lab al">ALWAYS</span> The module's own settings go <b>under</b> the module, pushed in 2 more spaces.</li>
+<li><span class="lab al">ALWAYS</span> Task keywords (<code>when</code>, <code>register</code>, <code>notify</code>, <code>changed_when</code>, <code>failed_when</code>) line up <b>with the module name</b>. They're about the task, not settings for the tool. Push them under the module and Ansible thinks they're module settings, and errors.</li>
+<li><span class="lab bo">BEST ORDER</span> <code>- name:</code> first → module and its settings → then task keywords.</li>
+<li><span class="lab bo">BEST ORDER</span> Always use the <b>full module name</b> (<code>ansible.builtin.dnf</code>), never the short one (<code>dnf</code>). The short one usually works, but the full one can never be confused with a same-named module from another collection. Like writing a full street address instead of "the blue house."</li>
+<li><span class="lab bo">BEST ORDER</span> Start every task name with a <b>capital letter and a verb</b>: "Install…", "Copy…", "Restart…". It's printed on screen and becomes your run log.</li>
+</ul></div>
+<pre><span class="lbl">yaml — one task, fully labeled</span>    - name: Install the web server             <span class="cm">← 1. name (what this step does)</span>
+      ansible.builtin.dnf:                     <span class="cm">← 2. module (the tool)</span>
+        name: httpd                            <span class="cm">← 2a. module setting: which package</span>
+        state: present                         <span class="cm">← 2b. module setting: make sure it's installed</span>
+      when: ansible_facts['os_family'] == "RedHat"   <span class="cm">← 3. task keyword: lines up with the module</span></pre>
+
+<h3>A4d. Does it run top to bottom every time?</h3>
+<div class="box rule"><b class="h">🔒 How a playbook runs <span class="lab al">ALWAYS</span></b>
+<ul>
+<li><b>Plays run in order</b>, top to bottom.</li>
+<li><b>Tasks run in order</b>, top to bottom. Task 1 finishes on <b>every</b> server before task 2 starts on any of them. (That's the default; <code>serial</code> changes how many servers are in each batch.)</li>
+<li><b>If a task fails on a server, that server stops.</b> It's dropped from the rest of the play. The other servers keep going.</li>
+<li><b>Handlers run at the end of the play</b>, once, and <b>only</b> if a task notified them <b>and</b> that task reported <code>changed</code>. If nothing changed, handlers do not run.</li>
+<li>Before task 1, Ansible runs a hidden step called <b>Gathering Facts</b>. It collects information about each server (OS version, IPs, memory) into <code>ansible_facts</code> so tasks can use it.</li>
+</ul></div>
+</section>
+
+<!-- A5 -->
+<section class="step" id="a5" data-title="A5 · If This, Then That">
+<span class="tag">Lesson A5</span>
+<h2>If This, Then That: Decisions, Fallbacks, and Messages</h2>
+<p class="story">Real jobs need decisions: "<i>if</i> a reboot is needed, reboot," "<i>if</i> you can't find the file, do this instead," "tell me what you found." This lesson shows how to write those in Ansible, and in plain shell, since you'll see both.</p>
+
+<h3>A5a. Remember an answer: <code>register</code></h3>
+<p><code>register</code> saves a task's result under a name, like writing the answer on a sticky note so a later task can read it.</p>
+<pre><span class="lbl">yaml</span>    - name: Look for a server line in the chrony config
+      ansible.builtin.command:
+        cmd: grep -c '^server' /etc/chrony.conf
+      register: ntp_check
+      changed_when: false
+      failed_when: false</pre>
+<dl class="flags">
+<dt>ansible.builtin.command</dt><dd>Runs a command on the server. Use it only when no real module does the job.</dd>
+<dt>cmd:</dt><dd>The command to run. <code>grep -c</code> counts matching lines (<code>-c</code> = <b>c</b>ount).</dd>
+<dt>register: ntp_check</dt><dd>Save the result as <code>ntp_check</code>. Inside it: <code>ntp_check.rc</code> (the <b>r</b>eturn <b>c</b>ode: 0 = success/found, anything else = not), <code>ntp_check.stdout</code> (what it printed), and <code>ntp_check.stdout_lines</code> (the same, split into lines).</dd>
+<dt>changed_when: false</dt><dd>"This task only looks. Never report it as a change." Without it, <code>command</code> <b>always</b> says <code>changed</code>, which is misleading.</dd>
+<dt>failed_when: false</dt><dd>"Never treat this as a failure." grep returns 1 when it finds nothing, and Ansible would normally call that a failure. Here "not found" is a valid answer, not an error.</dd>
+</dl>
+
+<h3>A5b. Only do it if: <code>when</code></h3>
+<pre><span class="lbl">yaml</span>    - name: Add the internal time server if none is configured
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        line: "server <span class="v" data-v="NTP"></span> iburst"
+      when: ntp_check.stdout == "0"</pre>
+<dl class="flags">
+<dt>when:</dt><dd>"Only run this task if the test is true." If false, the task is <b>skipped</b> (shown in cyan).</dd>
+<dt>ntp_check.stdout == "0"</dt><dd>"If grep counted zero server lines." <code>==</code> means "is equal to." (One <code>=</code> is not a test.)</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 <code>when</code> rules <span class="lab al">ALWAYS</span></b>
+<ul>
+<li><b>Never put <code>{{ }}</code> inside <code>when</code>.</b> Write <code>when: ntp_check.rc == 0</code>, not <code>when: "{{ ntp_check.rc }} == 0"</code>. <code>when</code> already understands variable names.</li>
+<li><code>when</code> is a task keyword, so it lines up with the module name (A4c).</li>
+<li>Useful tests: <code>==</code> equals, <code>!=</code> not equal, <code>&gt;</code> greater than, <code>and</code>, <code>or</code>, <code>not</code>, <code>is defined</code> (the variable exists).</li>
+<li>Several lines under <code>when:</code> as a list means <b>all</b> must be true (AND).</li>
+</ul></div>
+
+<h3>A5c. Print a message (Ansible's "echo"): <code>debug</code></h3>
+<pre><span class="lbl">yaml</span>    - name: Report what was found
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} has {{ ntp_check.stdout }} time server line(s)"</pre>
+<dl class="flags">
+<dt>ansible.builtin.debug</dt><dd>Prints a message on your screen during the run. It changes nothing on the server. It's Ansible's version of <code>echo</code>.</dd>
+<dt>msg:</dt><dd>The message. Use <code>var: ntp_check</code> instead of <code>msg:</code> to dump a whole variable, which is great for seeing what a <code>register</code> captured.</dd>
+<dt>{{ … }}</dt><dd>"Fill in this variable's value here." Called <b>Jinja</b> templating.</dd>
+<dt>inventory_hostname</dt><dd>A built-in variable: the server's name as written in the inventory.</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 Curly-brace quoting rule <span class="lab al">ALWAYS</span></b>
+<p>If a value <b>starts</b> with <code>{{</code>, the whole value <b>must</b> be in quotes: <code>name: "{{ agent_package }}"</code>. YAML sees <code>{</code> as its own symbol otherwise, and errors. Wrapping every value that contains <code>{{ }}</code> in quotes is the safe habit. <span class="lab bo">BEST ORDER</span></p></div>
+
+<h3>A5d. "If this fails, do that instead": <code>block</code> / <code>rescue</code> / <code>always</code></h3>
+<p>Like a <b>try / plan B / clean up</b> checklist. Ansible tries the <code>block</code>. If any task in it fails, it jumps to <code>rescue</code> (plan B). <code>always</code> runs no matter what.</p>
+<pre><span class="lbl">yaml</span>    - name: Install the agent, with a fallback
+      block:
+        - name: Try the agent from Satellite
+          ansible.builtin.dnf:
+            name: acme-agent
+            state: present
+      rescue:
+        - name: Tell me it failed on this server
+          ansible.builtin.debug:
+            msg: "Agent install FAILED on {{ inventory_hostname }}. Check the Satellite repo."
+      always:
+        - name: Record that this server was attempted
+          ansible.builtin.lineinfile:
+            path: /var/log/agent-rollout.log
+            line: "attempted by Ansible"
+            create: true
+            mode: "0600"</pre>
+<dl class="flags">
+<dt>block:</dt><dd>The group of tasks to <b>try</b>. They're indented under <code>block:</code> as a list.</dd>
+<dt>rescue:</dt><dd>Runs <b>only if</b> something in <code>block</code> failed. When rescue succeeds, the server is <b>not</b> marked failed (it shows as <code>rescued</code>) and keeps going.</dd>
+<dt>always:</dt><dd>Runs <b>every time</b>, whether block succeeded or failed.</dd>
+<dt>create: true</dt><dd>(lineinfile) Make the file if it doesn't exist.</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 Order <span class="lab al">ALWAYS</span> block → rescue → always</b><p><code>block</code>, <code>rescue</code>, and <code>always</code> line up with each other. <code>rescue</code> and <code>always</code> are both optional, but if present, they come after <code>block</code> in that order.</p></div>
+
+<h3>A5e. The same ideas in plain shell (bash)</h3>
+<p>You'll see these in scripts and in the Build Guide. Same logic, different words.</p>
+<pre><span class="lbl">bash — "if not found, say so"</span>grep -q '^server' /etc/chrony.conf || echo "No time server configured"
+grep -q '^server' /etc/chrony.conf &amp;&amp; echo "Time server is configured"</pre>
+<dl class="flags">
+<dt>grep -q</dt><dd>Search quietly (<code>-q</code>): print nothing, just succeed (found) or fail (not found).</dd>
+<dt>||</dt><dd>"<b>OR ELSE</b>": run the right side only if the left side <b>failed</b>. So: "look for it, or else say it's missing."</dd>
+<dt>&amp;&amp;</dt><dd>"<b>AND THEN</b>": run the right side only if the left side <b>succeeded</b>.</dd>
+<dt>echo "…"</dt><dd>Print the text in quotes on screen.</dd>
+</dl>
+<pre><span class="lbl">bash — full if / then / else</span>if grep -q '^server' /etc/chrony.conf; then
+  echo "Found a time server"
+else
+  echo "Not found - adding one"
+  echo "server <span class="v" data-v="NTP"></span> iburst" &gt;&gt; /etc/chrony.conf
+fi</pre>
+<dl class="flags">
+<dt>if COMMAND; then</dt><dd>"If this command succeeds, do the lines after <code>then</code>." The <code>;</code> ends the test so <code>then</code> can share the line.</dd>
+<dt>else</dt><dd>"Otherwise, do these lines instead."</dd>
+<dt>fi</dt><dd>"End of the if." It's <code>if</code> spelled backwards. <span class="lab al">ALWAYS</span> required; forget it and bash says <code>syntax error: unexpected end of file</code>.</dd>
+<dt>&gt;&gt;</dt><dd>Add to the end of the file (never <code>&gt;</code>, which would erase it).</dd>
+</dl>
+<pre><span class="lbl">bash — test if a file exists</span>if [ -f /etc/chrony.conf ]; then echo "File exists"; else echo "File missing"; fi</pre>
+<dl class="flags">
+<dt>[ -f FILE ]</dt><dd>A test: "is this a regular <b>f</b>ile that exists?" (<code>-d</code> = is it a directory.) <span class="lab al">ALWAYS</span> put a space after <code>[</code> and before <code>]</code>. <code>[-f</code> without the space fails.</dd>
+<dt>; between parts</dt><dd>Lets you write the whole if on one line.</dd>
+</dl>
+<div class="box choice"><b class="h">🔀 Shell or Ansible for this? <span class="lab ch">CHOICE</span></b>
+<p>For one server, right now: shell is fine. For more than one server, or anything you'll repeat: <b>use Ansible</b>, with real modules like <code>lineinfile</code> that are idempotent. The shell <code>&gt;&gt;</code> example above would add a <b>second</b> copy of the line if you ran it twice; Ansible's <code>lineinfile</code> never would.</p></div>
+</section>
+
+<!-- A6 -->
+<section class="step" id="a6" data-title="A6 · Playbook: Patch Servers">
+<span class="tag">Lesson A6</span>
+<h2>Playbook 1: Patch (Update) Servers Safely</h2>
+<p class="story">This playbook updates every package, checks whether the update needs a reboot, and reboots only if it does, one server at a time, so you never take everything down at once. On a disconnected network, the updates come from Satellite (for registered servers) or your local repos.</p>
+
+<pre><span class="lbl">yaml — ~/ansible/playbooks/patch.yml</span>---
+- name: Patch RHEL servers one at a time
+  hosts: rhel_servers
+  become: true
+  serial: 1
+
+  tasks:
+    - name: Update every installed package
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+
+    - name: Check whether a reboot is needed
+      ansible.builtin.command:
+        cmd: dnf needs-restarting -r
+      register: reboot_check
+      changed_when: false
+      failed_when: reboot_check.rc &gt; 1
+      check_mode: false
+
+    - name: Tell me the result
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ 'REBOOT needed' if reboot_check.rc == 1 else 'no reboot needed' }}"
+
+    - name: Reboot if the update needs it
+      ansible.builtin.reboot:
+        reboot_timeout: 900
+      when: reboot_check.rc == 1</pre>
+
+<h3>Line by line</h3>
+<dl class="flags">
+<dt>---</dt><dd>Start of the YAML document. <span class="lab bo">BEST ORDER</span></dd>
+<dt>- name: Patch…</dt><dd>The play begins (dash = first item in the list of plays).</dd>
+<dt>hosts: rhel_servers</dt><dd><b>Who:</b> the group from inventory.ini. The Satellite server is <b>not</b> in this group, on purpose.</dd>
+<dt>become: true</dt><dd><b>How:</b> use sudo. Installing updates needs root.</dd>
+<dt>serial: 1</dt><dd><b>One server at a time</b>, fully (update → check → reboot) before the next starts. If one breaks, the rest are untouched. Use <code>serial: "25%"</code> to go a quarter at a time.</dd>
+<dt>(blank line)</dt><dd>Blank lines are ignored. Use one before <code>tasks:</code> to make the file easier to read.</dd>
+<dt>tasks:</dt><dd><b>What:</b> the steps, in order.</dd>
+<dt>ansible.builtin.dnf:</dt><dd>The package tool.</dd>
+<dt>name: "*"</dt><dd>Every package. <b>The quotes are required</b>; a bare <code>*</code> is a YAML symbol (A3 rule 5).</dd>
+<dt>state: latest</dt><dd>"Make sure it's the newest version available." (<code>present</code> would mean "just make sure it's installed, any version.")</dd>
+<dt>cmd: dnf needs-restarting -r</dt><dd>Asks RHEL "do the updates need a reboot?" It answers with its <b>exit code</b>: <code>0</code> = no reboot needed, <code>1</code> = reboot needed. (<code>-r</code> = only report on reboot need.)</dd>
+<dt>register: reboot_check</dt><dd>Save the answer.</dd>
+<dt>changed_when: false</dt><dd>It only asks a question, so never report "changed."</dd>
+<dt>failed_when: reboot_check.rc &gt; 1</dt><dd>Exit code 1 is an <b>answer</b> here, not an error. Only 2 or higher is a real failure.</dd>
+<dt>check_mode: false</dt><dd>In a dry run (<code>--check</code>), Ansible normally <b>skips</b> <code>command</code> tasks. This line says "always run this one, even in a dry run," which is safe because it only asks. Without it, the next tasks would have no answer to read and would error.</dd>
+<dt>'A' if … else 'B'</dt><dd>Inside <code>{{ }}</code>: "say A if the test is true, otherwise say B."</dd>
+<dt>ansible.builtin.reboot:</dt><dd>Reboots the server, <b>waits</b> for it to come back, and confirms it's reachable before moving on.</dd>
+<dt>reboot_timeout: 900</dt><dd>Wait up to 900 seconds (15 minutes) for it to come back. STIG servers can boot slowly.</dd>
+<dt>when: reboot_check.rc == 1</dt><dd>Only reboot if the check said "reboot needed."</dd>
+</dl>
+
+<div class="box warn"><b class="h">📣 Never point this at the Satellite server</b><p>Satellite has its own update tool (<code>satellite-maintain</code>) that stops and starts its services in the right order. A plain <code>dnf update</code> on Satellite can break it. That's why Satellite lives in its own inventory group.</p></div>
+
+<h3>A6a. Run it, the safe way, every time</h3>
+<p><span class="lab bo">BEST ORDER</span> Follow these steps in this order. Each one catches a different kind of mistake before it can hurt anything.</p>
+<pre><span class="lbl">bash — on the control node</span>tmux new -s patch
+cd ~/ansible
+ansible-playbook playbooks/patch.yml --syntax-check
+ansible-playbook playbooks/patch.yml --list-hosts
+ansible-playbook playbooks/patch.yml --check --diff -K
+ansible-playbook playbooks/patch.yml --limit web01.lab.example -K
+ansible-playbook playbooks/patch.yml -K</pre>
+<dl class="flags">
+<dt>tmux new -s patch</dt><dd><b>Step 0: always first.</b> Protects the run if you get disconnected (A1d).</dd>
+<dt>--syntax-check</dt><dd><b>Step 1:</b> grammar check. Contacts no servers.</dd>
+<dt>--list-hosts</dt><dd><b>Step 2:</b> prints exactly which servers it would touch. Make sure Satellite isn't there.</dd>
+<dt>--check</dt><dd><b>Step 3: dry run</b> (short form <code>-C</code>). Shows what <i>would</i> change, and changes nothing.</dd>
+<dt>--diff</dt><dd>With --check: also shows the before/after of any file changes (short form <code>-D</code>).</dd>
+<dt>-K</dt><dd>Ask for your sudo password once, at the start (long form <code>--ask-become-pass</code>). Needed because <code>become: true</code> uses sudo and STIG requires a password for it. <b>Capital K.</b> Lowercase <code>-k</code> asks for the SSH password instead.</dd>
+<dt>--limit NAME</dt><dd><b>Step 4: test on ONE server first</b> (short form <code>-l</code>). Only that server is touched. You can also give a group name.</dd>
+<dt>(no limit)</dt><dd><b>Step 5:</b> the real run on everyone in <code>hosts</code>.</dd>
+</dl>
+<div class="box rule"><b class="h">🔒 "Will it do the same thing every time?"</b>
+<ul>
+<li><b>Yes.</b> Run it again right after, and every server reports <code>ok</code> (nothing new to update) and no reboot, because <code>dnf</code> and the reboot check are idempotent. That's the proof it worked.</li>
+<li>Each <b>new</b> month's run will update whatever is new in Satellite at that time. The <i>behavior</i> is identical; the <i>packages</i> depend on what's been published.</li>
+</ul></div>
+</section>
+
+<!-- A7 -->
+<section class="step" id="a7" data-title="A7 · Playbook: Install an Agent">
+<span class="tag">Lesson A7</span>
+<h2>Playbook 2: Install and Configure an Agent</h2>
+<p class="story">Security and monitoring teams often need a small program, an <b>agent</b>, on every server. It usually comes as an RPM package, needs a config file saying which server to report to, and needs its service running. This playbook does all three. <code>acme-agent</code> is a <b>made-up name</b>; swap in your real agent's package name, service name, and config.</p>
+<p>It assumes the agent's RPM is already in Satellite (like the "Approved RPMs" repo from Build Guide Step 9) and the servers are registered to it.</p>
+
+<pre><span class="lbl">yaml — ~/ansible/playbooks/agent.yml</span>---
+- name: Install and start the monitoring agent
+  hosts: rhel_servers
+  become: true
+
+  vars:
+    agent_package: acme-agent
+    agent_service: acme-agent
+    agent_config: /etc/acme-agent/agent.conf
+    agent_server: <span class="v" data-v="FQDN"></span>
+    agent_port: 8443
+
+  tasks:
+    - name: Install the agent package
+      ansible.builtin.dnf:
+        name: "{{ agent_package }}"
+        state: present
+
+    - name: Write the agent config file
+      ansible.builtin.copy:
+        dest: "{{ agent_config }}"
+        content: |
+          server={{ agent_server }}
+          port={{ agent_port }}
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart the agent
+
+    - name: Start the agent now and at every boot
+      ansible.builtin.systemd_service:
+        name: "{{ agent_service }}"
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart the agent
+      ansible.builtin.systemd_service:
+        name: "{{ agent_service }}"
+        state: restarted</pre>
+
+<h3>Line by line</h3>
+<dl class="flags">
+<dt>vars:</dt><dd>Values reused below. <span class="lab bo">BEST ORDER</span> Anything you might change later (names, paths, ports) goes here, so you edit <b>one line</b>, not five.</dd>
+<dt>agent_package: …</dt><dd>A variable: a name, a colon, a value. Names use lowercase and underscores only. <span class="lab al">ALWAYS</span> no dashes or spaces in variable names.</dd>
+<dt>name: "{{ agent_package }}"</dt><dd>Fill in the variable. <b>Quotes required</b> because the value starts with <code>{{</code>.</dd>
+<dt>state: present</dt><dd>"Make sure it's installed." Unlike <code>latest</code>, it won't upgrade an agent that's already there.</dd>
+<dt>ansible.builtin.copy:</dt><dd>Puts a file on the server.</dd>
+<dt>dest:</dt><dd>Where the file goes (<b>dest</b>ination).</dd>
+<dt>content: |</dt><dd>The file's text, written right here. The <code>|</code> means "keep the following lines exactly as written, line breaks included." The lines under it must be indented further than <code>content</code>.</dd>
+<dt>owner / group</dt><dd>Who owns the file.</dd>
+<dt>mode: "0600"</dt><dd>Permissions: only root can read or write it. <b>Quotes required</b> to keep the leading zero (A3 rule 6).</dd>
+<dt>notify: Restart the agent</dt><dd>"If this task changed the file, call the handler with this exact name." <span class="lab al">ALWAYS</span> must match the handler's <code>name:</code> <b>exactly</b>, including capital letters.</dd>
+<dt>ansible.builtin.systemd_service:</dt><dd>Controls services. (On older Ansible versions this module is called <code>ansible.builtin.systemd</code>. If you get "couldn't resolve module," use that name instead.)</dd>
+<dt>state: started</dt><dd>"Make sure it's running." Does nothing if it already is.</dd>
+<dt>enabled: true</dt><dd>"Make sure it starts at every boot."</dd>
+<dt>handlers:</dt><dd>Only-when-called tasks. <span class="lab bo">BEST ORDER</span> always last in the play.</dd>
+<dt>state: restarted</dt><dd>Stop and start the service so it reads the new config.</dd>
+</dl>
+
+<div class="box rule"><b class="h">🔒 Does the handler run every time? No.</b>
+<ul>
+<li><b>First run:</b> the config file is new → the copy task reports <code>changed</code> → the handler runs once, at the end of the play.</li>
+<li><b>Second run, nothing edited:</b> the file already matches → <code>ok</code> → the handler does <b>not</b> run. The service is not restarted for no reason.</li>
+<li><b>You change <code>agent_port</code> and run again:</b> the file content changes → <code>changed</code> → the handler runs.</li>
+<li>Handlers run <b>at the end of the play</b>, not right after the task that notified them. <span class="lab al">ALWAYS</span></li>
+<li>If several tasks notify the same handler, it still runs only <b>once</b>. <span class="lab al">ALWAYS</span></li>
+</ul></div>
+
+<div class="box why"><b class="h">💡 Why is the order install → config → start?</b><p>It's the only order that works. <span class="lab al">ALWAYS</span> You can't write a config file into a folder the package hasn't created yet, and you shouldn't start a service before it knows where to report. Tasks run top to bottom (A4d), so the order in the file <i>is</i> the order of work: <b>install, then configure, then start</b>. Use that order for any piece of software.</p></div>
+</section>
+
+<!-- A8 -->
+<section class="step" id="a8" data-title="A8 · More Production Tasks">
+<span class="tag">Lesson A8</span>
+<h2>More Useful Production Tasks</h2>
+<p class="story">Short, ready-to-use recipes. Each one is a task (or two) you can paste into the <code>tasks:</code> list of any play that has <code>become: true</code>.</p>
+
+<h3>A8a. Set the login banner (a STIG requirement)</h3>
+<pre><span class="lbl">yaml</span>    - name: Set the approved login banner
+      ansible.builtin.copy:
+        dest: /etc/issue
+        content: |
+          Paste your organization's approved banner text here.
+        owner: root
+        group: root
+        mode: "0644"</pre>
+<dl class="flags">
+<dt>/etc/issue</dt><dd>The text shown before the console login prompt.</dd>
+<dt>content: |</dt><dd>Paste the exact approved banner. Keep every line indented under <code>content</code>.</dd>
+<dt>mode: "0644"</dt><dd>Everyone can read it, only root can change it.</dd>
+</dl>
+
+<h3>A8b. Make sure every server uses the internal time server</h3>
+<pre><span class="lbl">yaml</span>    - name: Point chrony at the internal time server
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^server '
+        line: "server <span class="v" data-v="NTP"></span> iburst"
+      notify: Restart chronyd
+
+  handlers:
+    - name: Restart chronyd
+      ansible.builtin.systemd_service:
+        name: chronyd
+        state: restarted</pre>
+<dl class="flags">
+<dt>ansible.builtin.lineinfile</dt><dd>Makes sure one specific line is in a file.</dd>
+<dt>regexp: '^server '</dt><dd>"Find the line that <b>starts</b> with <code>server </code>." (<code>^</code> = start of line.) If found, it's <b>replaced</b>. If not found, the new line is added at the end.</dd>
+<dt>line:</dt><dd>What the line should say.</dd>
+<dt>handlers:</dt><dd>This goes at the <b>play</b> level (lined up with <code>tasks:</code>), not inside the task list.</dd>
+</dl>
+
+<h3>A8c. Create an admin account</h3>
+<pre><span class="lbl">yaml</span>    - name: Make sure the admin account exists
+      ansible.builtin.user:
+        name: <span class="v" data-v="STAGEUSER"></span>
+        groups: wheel
+        append: true
+        shell: /bin/bash
+        state: present</pre>
+<dl class="flags">
+<dt>ansible.builtin.user</dt><dd>Creates or changes a user account.</dd>
+<dt>groups: wheel</dt><dd>Add to the <code>wheel</code> group, which is RHEL's "allowed to use sudo" group.</dd>
+<dt>append: true</dt><dd><span class="lab al">ALWAYS</span> include this with <code>groups</code>. It means "<b>add</b> to these groups." Without it, Ansible <b>removes</b> the user from every group not listed.</dd>
+<dt>state: present</dt><dd>Make sure the account exists. (<code>absent</code> would delete it.)</dd>
+</dl>
+
+<h3>A8d. Disk space report from every server</h3>
+<pre><span class="lbl">yaml</span>    - name: Check disk space
+      ansible.builtin.command:
+        cmd: df -h /var /var/log /tmp
+      register: disk
+      changed_when: false
+
+    - name: Show disk space
+      ansible.builtin.debug:
+        var: disk.stdout_lines</pre>
+<dl class="flags">
+<dt>df -h</dt><dd>Disk free, human-readable (G/T).</dd>
+<dt>var: disk.stdout_lines</dt><dd>Print what <code>df</code> printed, one line per row, so it's readable.</dd>
+</dl>
+<div class="box choice"><b class="h">🔀 Reading-only jobs don't need <code>become</code> <span class="lab ch">CHOICE</span></b><p>A report like this one only reads, so it could run without root. If you make it its own playbook, you can leave out <code>become: true</code> and <code>-K</code>. <b>Rule of thumb: only ask for root when the task changes something.</b></p></div>
+</section>
+
+<!-- A9 -->
+<section class="step" id="a9" data-title="A9 · Run It & Read Results">
+<span class="tag">Lesson A9</span>
+<h2>Run It, Read the Results, Fix the Errors</h2>
+
+<h3>A9a. The <code>ansible-playbook</code> flags you'll use</h3>
+<div class="tablewrap"><table>
+<tr><th>Short</th><th>Long</th><th>What it does</th><th>When to use it</th></tr>
+<tr><td>(none)</td><td><code>--syntax-check</code></td><td>Grammar check only</td><td><b>Every time</b> you edit</td></tr>
+<tr><td>(none)</td><td><code>--list-hosts</code></td><td>Show which servers it would touch</td><td>Before every real run</td></tr>
+<tr><td>(none)</td><td><code>--list-tasks</code></td><td>Show the task names in order</td><td>To review a playbook you didn't write</td></tr>
+<tr><td><code>-C</code></td><td><code>--check</code></td><td>Dry run: show changes, make none</td><td>Before every real run</td></tr>
+<tr><td><code>-D</code></td><td><code>--diff</code></td><td>Show file before/after</td><td>With <code>--check</code>, and on real runs that edit files</td></tr>
+<tr><td><code>-l</code></td><td><code>--limit</code></td><td>Only these servers or groups</td><td>Test on one server first</td></tr>
+<tr><td><code>-K</code></td><td><code>--ask-become-pass</code></td><td>Ask for the sudo password</td><td>Any play with <code>become: true</code> on STIG servers</td></tr>
+<tr><td><code>-i</code></td><td><code>--inventory</code></td><td>Use a different inventory file</td><td>Only if not set in <code>ansible.cfg</code></td></tr>
+<tr><td><code>-v</code> … <code>-vvvv</code></td><td><code>--verbose</code></td><td>More detail. Each extra <code>v</code> = more</td><td><code>-vvv</code> when debugging SSH or errors</td></tr>
+<tr><td>(none)</td><td><code>--start-at-task "Name"</code></td><td>Skip ahead to a task by its name</td><td>Resuming after fixing a failure</td></tr>
+<tr><td>(none)</td><td><code>--step</code></td><td>Ask yes/no before every task</td><td>Walking through a new playbook slowly</td></tr>
+</table></div>
+<div class="box rule"><b class="h">🔒 Flag order <span class="lab ch">CHOICE</span>, so use this one</b><p>Flags can go in any order after the playbook name. Ansible doesn't care. Use this one every time so your commands look the same: <code>ansible-playbook PLAYBOOK --check --diff --limit HOST -K</code> (what to run → how to run it → where → password last).</p></div>
+
+<h3>A9b. Reading the colors</h3>
+<div class="tablewrap"><table>
+<tr><th>Color / word</th><th>Meaning</th><th>Good or bad?</th></tr>
+<tr><td>Green <code>ok</code></td><td>Already correct; nothing needed doing</td><td>Good</td></tr>
+<tr><td>Yellow <code>changed</code></td><td>Ansible made a change</td><td>Good (expected on first runs)</td></tr>
+<tr><td>Cyan <code>skipping</code></td><td>A <code>when</code> test was false</td><td>Fine: working as designed</td></tr>
+<tr><td>Red <code>fatal</code> / <code>failed</code></td><td>The task failed on that server; that server stops</td><td>Bad: read the message</td></tr>
+<tr><td>Red <code>UNREACHABLE</code></td><td>Couldn't log in to the server at all</td><td>Bad: SSH problem</td></tr>
+<tr><td>Purple warning</td><td>A heads-up, not an error</td><td>Read it, usually harmless</td></tr>
+</table></div>
+
+<h3>A9c. The PLAY RECAP (the report card)</h3>
+<pre><span class="lbl">example output</span>PLAY RECAP *********************************************************
+web01.lab.example : ok=5  changed=2  unreachable=0  failed=0  skipped=1  rescued=0  ignored=0
+web02.lab.example : ok=5  changed=0  unreachable=0  failed=0  skipped=1  rescued=0  ignored=0
+db01.lab.example  : ok=1  changed=0  unreachable=0  failed=1  skipped=0  rescued=0  ignored=0</pre>
+<dl class="flags">
+<dt>ok</dt><dd>Tasks that finished fine (this count <b>includes</b> changed ones).</dd>
+<dt>changed</dt><dd>Tasks that made a change.</dd>
+<dt>unreachable</dt><dd>Couldn't connect. Must be 0.</dd>
+<dt>failed</dt><dd>Tasks that failed. <b>Must be 0</b> for a clean run. Here, db01 failed and stopped early.</dd>
+<dt>skipped</dt><dd>Tasks skipped by a <code>when</code>.</dd>
+<dt>rescued</dt><dd>Failures caught and handled by a <code>rescue</code> block.</dd>
+<dt>ignored</dt><dd>Failures ignored on purpose (<code>ignore_errors: true</code>). Avoid that keyword; it hides real problems.</dd>
+</dl>
+<div class="expect"><b>A clean run:</b> <code>unreachable=0</code> and <code>failed=0</code> on every line. <b>Run it a second time:</b> <code>changed=0</code> everywhere proves the playbook is idempotent.</div>
+
+<h3>A9d. Common errors and exactly what to do</h3>
+<div class="tablewrap"><table>
+<tr><th>You see</th><th>It means</th><th>Do this</th></tr>
+<tr><td><code>mapping values are not allowed</code> / <code>could not find expected ':'</code></td><td>YAML spacing or a missing space after a colon</td><td>Go to the line number it gives. Count spaces against the line above (A3).</td></tr>
+<tr><td><code>found character that cannot start any token</code></td><td>A Tab character, or an unquoted <code>*</code>, <code>{</code>, or <code>@</code></td><td>Replace tabs with spaces; quote the value.</td></tr>
+<tr><td><code>UNREACHABLE! … Permission denied (publickey)</code></td><td>Your SSH key isn't on that server, or it's the wrong user</td><td>Rerun <code>ssh-copy-id</code>; check <code>remote_user</code>; test with plain <code>ssh</code>.</td></tr>
+<tr><td><code>UNREACHABLE! … Name or service not known</code></td><td>DNS can't find the name in your inventory</td><td>Check spelling; <code>getent hosts NAME</code>.</td></tr>
+<tr><td><code>Host key verification failed</code></td><td>First connection to that server, or its identity changed</td><td>SSH to it once by hand and verify the fingerprint. Never turn off <code>host_key_checking</code>.</td></tr>
+<tr><td><code>Missing sudo password</code></td><td><code>become: true</code> with no password given</td><td>Add <code>-K</code>.</td></tr>
+<tr><td><code>couldn't resolve module/action</code></td><td>Typo in the module name, or it's not in <code>ansible-core</code></td><td>Check spelling; use only <code>ansible.builtin.*</code> in the air gap.</td></tr>
+<tr><td><code>No package … available</code></td><td>The package isn't in any repo that server can reach</td><td>Check it's in Satellite and the server is registered; <code>dnf repolist</code> on that server.</td></tr>
+<tr><td><code>The task includes an option with an undefined variable</code></td><td>A <code>{{ name }}</code> that was never set, or a typo</td><td>Check spelling against <code>vars:</code>. Names are case-sensitive.</td></tr>
+<tr><td><code>Unsupported parameters … when</code></td><td><code>when</code> was indented under the module instead of lining up with it</td><td>Move it left to line up with the module name (A4c).</td></tr>
+<tr><td>Warning: <code>could not match supplied host pattern</code></td><td>The <code>hosts:</code> group name isn't in the inventory</td><td>Check spelling; <code>ansible-inventory --graph</code>.</td></tr>
+</table></div>
+
+<div class="check"><b class="h">✔ Checkpoint A9</b>
+<ol class="do">
+<li><span class="t">You ran a playbook with <code>--syntax-check</code>, <code>--check --diff</code>, then <code>--limit</code> on one server, then for real.</span></li>
+<li><span class="t">The PLAY RECAP showed <code>failed=0</code> and <code>unreachable=0</code>.</span></li>
+<li><span class="t">A second run showed <code>changed=0</code>.</span></li>
+</ol></div>
+</section>
+
+  </main></div>
   <div id="trouble" class="hidden"><main>
 <div class="pagehead"><div class="eyebrow">When something doesn't go to plan</div><h1>Troubleshooting <em>&amp;</em> Fixes</h1><p>Problems met during real builds, with what you see, why it happens, the fix, and how to confirm it worked. Search by error text or command.</p></div>
 
@@ -2066,7 +2861,7 @@ Restart <code>httpd</code> (the web server) only if the web page itself uses Ker
 
   var done = {};
   try{ done = JSON.parse(store.get("sat_done")||"{}")||{}; }catch(e){ done = {}; }
-  document.querySelectorAll("#guide section.step").forEach(function(sec){
+  document.querySelectorAll("#guide section.step, #ansible section.step").forEach(function(sec){
     sec.querySelectorAll("ol.do > li").forEach(function(li, idx){
       var id = sec.id + "-" + idx;
       var cb = document.createElement("input"); cb.type="checkbox"; cb.checked = !!done[id];
@@ -2107,6 +2902,25 @@ Restart <code>httpd</code> (the web server) only if the web page itself uses Ker
   bars();
   document.querySelectorAll("#guide ol.do > li input").forEach(function(cb){cb.addEventListener("change",bars);});
 
+  var apath=document.getElementById("apath");
+  var lessons=Array.prototype.slice.call(document.querySelectorAll("#ansible section.step"));
+  lessons.forEach(function(sec){
+    var t=sec.dataset.title.split(" · ");
+    var li=document.createElement("li"); li.dataset.sec=sec.id;
+    li.innerHTML='<a href="#'+sec.id+'"><span class="node">'+t[0]+'</span><span class="txt">'+t.slice(1).join(" · ")+'<small></small></span></a>';
+    apath.appendChild(li);
+  });
+  function abars(){
+    apath.querySelectorAll("li").forEach(function(li){
+      var sec=document.getElementById(li.dataset.sec);
+      var a=sec.querySelectorAll("ol.do > li input").length, c=sec.querySelectorAll("ol.do > li input:checked").length;
+      li.classList.toggle("done",a>0&&a===c); li.classList.toggle("partial",c>0&&c<a);
+      li.querySelector("small").textContent=a?(c+" of "+a+" done"):"";
+    });
+  }
+  abars();
+  document.querySelectorAll("#ansible ol.do > li input").forEach(function(cb){cb.addEventListener("change",abars);});
+
   var tnav=document.getElementById("tnav");
   document.querySelectorAll("#trouble article.ts").forEach(function(art){
     var a=document.createElement("a"); a.href="#"+art.id; a.textContent=art.dataset.title; a.dataset.art=art.id; tnav.appendChild(a);
@@ -2115,6 +2929,15 @@ Restart <code>httpd</code> (the web server) only if the web page itself uses Ker
   var crumb=document.getElementById("crumb");
   function spy(){
     var guideOn=!document.getElementById("guide").classList.contains("hidden");
+    var ansOn=!document.getElementById("ansible").classList.contains("hidden");
+    if(ansOn){
+      var ac=null; lessons.forEach(function(el){ if(el.getBoundingClientRect().top<180) ac=el; });
+      apath.querySelectorAll("li").forEach(function(li){ li.classList.toggle("active",!!ac&&li.dataset.sec===ac.id); });
+      if(!ac){ crumb.innerHTML='Ansible 101 &nbsp;/&nbsp; <b>Overview</b>'; return; }
+      var at=ac.dataset.title.split(" · ");
+      crumb.innerHTML='Ansible 101 &nbsp;/&nbsp; <b>Lesson '+at[0]+" · "+at.slice(1).join(" · ")+'</b>';
+      return;
+    }
     var list=guideOn?steps:Array.prototype.slice.call(document.querySelectorAll("#trouble article.ts:not(.hidden)"));
     var cur=null;
     list.forEach(function(el){ if(el.getBoundingClientRect().top<180) cur=el; });
@@ -2134,6 +2957,8 @@ Restart <code>httpd</code> (the web server) only if the web page itself uses Ker
     document.querySelectorAll("nav.top button[data-tab]").forEach(function(b){ b.classList.toggle("on",b.dataset.tab===tab); });
     document.getElementById("guide").classList.toggle("hidden",tab!=="guide");
     document.getElementById("trouble").classList.toggle("hidden",tab!=="trouble");
+    document.getElementById("ansible").classList.toggle("hidden",tab!=="ansible");
+    document.getElementById("apathwrap").classList.toggle("hidden",tab!=="ansible");
     document.getElementById("pathwrap").classList.toggle("hidden",tab!=="guide");
     document.getElementById("tnavwrap").classList.toggle("hidden",tab!=="trouble");
     spy();
@@ -2143,7 +2968,7 @@ Restart <code>httpd</code> (the web server) only if the web page itself uses Ker
   document.querySelectorAll("[data-goto]").forEach(function(a){
     a.addEventListener("click",function(e){
       e.preventDefault(); var el=document.getElementById(a.dataset.goto);
-      show(el.closest("#trouble")?"trouble":"guide"); el.scrollIntoView(); body.classList.remove("nav-open");
+      show(el.closest("#trouble")?"trouble":(el.closest("#ansible")?"ansible":"guide")); el.scrollIntoView(); body.classList.remove("nav-open");
     });
   });
   document.querySelectorAll("[data-flags]").forEach(function(b){ b.addEventListener("click",function(){ show("guide"); document.getElementById("flags101").scrollIntoView(); }); });
